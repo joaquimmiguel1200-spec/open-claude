@@ -8,7 +8,7 @@ Open Claude é um agente de IA pessoal em construção, com foco em conversaçã
 - Backend: Supabase
 - Banco: PostgreSQL + RLS
 - Auth: Supabase Auth
-- Storage: Supabase Storage
+- Storage: Supabase Storage privado
 - Realtime: Supabase Realtime
 - IA: camada de provedor configurável, inicialmente orientada ao Lovable API
 - Busca vetorial: pgvector em etapa posterior
@@ -29,9 +29,21 @@ Open Claude é um agente de IA pessoal em construção, com foco em conversaçã
 11. Cowork
 12. Security + Autonomy
 
-## Etapa 3 — Chat
+## Status atual
 
-O banco possui a base para chats e mensagens. A camada de aplicação deve persistir mensagens, manter histórico, preparar streaming e encaminhar contexto ao agente sem impor limites artificiais de mensagens ou sessões.
+- Etapa 2 — backend de Auth/Profiles/Projects/RLS: implementado
+- Etapa 3 — backend de Chat/Messages: implementado
+- Etapa 4 — backend de Memory/Summaries: implementado
+- Etapa 5 — backend de Projects + Files + Storage privado: implementado
+- Etapa 1 — frontend canônico Next.js: aguardando a criação do novo projeto Lovable
+
+## Etapa 5 — Projects + Files
+
+Projects são o limite de workspace para chats, memória e arquivos, com papéis `owner`, `editor` e `viewer`.
+
+Arquivos possuem um catálogo em `public.files` e bytes em um bucket privado `open-claude-files`. O catálogo guarda dono, projeto/chat, nome, pasta virtual, MIME, tamanho, checksum, origem e caminho de Storage. A autorização é aplicada por RLS no banco e por políticas em `storage.objects`.
+
+Arquivos de projeto podem ser lidos por membros; upload, alteração e exclusão exigem `owner`/`editor`. Arquivos pessoais ficam restritos ao próprio usuário. A identidade de Storage (`owner_id`, `project_id`, bucket e path) é imutável depois da criação.
 
 ## Segurança
 

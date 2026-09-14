@@ -11,7 +11,7 @@ Open Claude é um agente de IA pessoal em construção, com foco em conversaçã
 - Storage: Supabase Storage privado
 - Realtime: Supabase Realtime
 - IA: camada de provedor configurável, inicialmente orientada ao Lovable API
-- Busca vetorial: pgvector em etapa posterior
+- RAG: pgvector + Supabase/gte-small
 - Git: GitHub
 
 ## Etapas
@@ -35,6 +35,7 @@ Open Claude é um agente de IA pessoal em construção, com foco em conversaçã
 - Etapa 3 — backend de Chat/Messages: implementado
 - Etapa 4 — backend de Memory/Summaries: implementado
 - Etapa 5 — backend de Projects + Files + Storage privado: implementado
+- Etapa 6 — backend de RAG + pgvector + embedding endpoint: implementado
 - Etapa 1 — frontend canônico Next.js: aguardando a criação do novo projeto Lovable
 
 ## Etapa 5 — Projects + Files
@@ -43,7 +44,13 @@ Projects são o limite de workspace para chats, memória e arquivos, com papéis
 
 Arquivos possuem um catálogo em `public.files` e bytes em um bucket privado `open-claude-files`. O catálogo guarda dono, projeto/chat, nome, pasta virtual, MIME, tamanho, checksum, origem e caminho de Storage. A autorização é aplicada por RLS no banco e por políticas em `storage.objects`.
 
-Arquivos de projeto podem ser lidos por membros; upload, alteração e exclusão exigem `owner`/`editor`. Arquivos pessoais ficam restritos ao próprio usuário. A identidade de Storage (`owner_id`, `project_id`, bucket e path) é imutável depois da criação.
+## Etapa 6 — RAG
+
+O RAG usa `public.rag_chunks` para armazenar trechos de arquivos e embeddings de 384 dimensões. O modelo inicial é `Supabase/gte-small`, executado diretamente em uma Edge Function autenticada, sem depender de uma API externa de embeddings.
+
+A recuperação usa pgvector/HNSW com vetores normalizados e também mantém busca lexical para ranking híbrido. `match_rag_chunks()` filtra por usuário, Project e arquivo, aplica limiar de similaridade e limita o retorno a 50 resultados.
+
+O pipeline esperado é: arquivo → extração de texto → chunking → chunks pendentes → embedding → chunks prontos → recuperação → contexto para o agente. O texto recuperado é sempre tratado como dado não confiável e nunca como instrução de sistema.
 
 ## Segurança
 

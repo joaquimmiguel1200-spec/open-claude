@@ -32,7 +32,7 @@ create index if not exists memory_items_user_id_idx on public.memory_items(user_
 create index if not exists memory_items_project_id_idx on public.memory_items(project_id);
 create index if not exists memory_items_chat_id_idx on public.memory_items(chat_id);
 create index if not exists memory_items_category_idx on public.memory_items(user_id, category);
-create index if not exists memory_items_active_idx on public.memory_items(user_id, updated_at desc) where expires_at is null or expires_at > now();
+create index if not exists memory_items_expires_at_idx on public.memory_items(user_id, expires_at);
 create unique index if not exists memory_items_dedupe_idx on public.memory_items(user_id, coalesce(project_id, '00000000-0000-0000-0000-000000000000'::uuid), dedupe_key) where dedupe_key is not null;
 create index if not exists conversation_summaries_chat_idx on public.conversation_summaries(chat_id, updated_at desc);
 
@@ -54,7 +54,6 @@ revoke all on public.conversation_summaries from anon;
 grant select, insert, update, delete on public.memory_items to authenticated;
 grant select, insert, update, delete on public.conversation_summaries to authenticated;
 
--- Reuse the project's standard updated_at trigger if present.
 do $$
 begin
   if to_regprocedure('public.set_updated_at()') is not null then

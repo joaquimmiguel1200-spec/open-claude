@@ -31,12 +31,13 @@ Open Claude é um agente de IA pessoal em construção, com foco em conversaçã
 
 ## Status atual
 
+- Etapa 1 — frontend canônico Next.js: em execução com agente de código externo (Kimi); Lovable não é obrigatório para o frontend canônico
 - Etapa 2 — backend de Auth/Profiles/Projects/RLS: implementado
 - Etapa 3 — backend de Chat/Messages: implementado
 - Etapa 4 — backend de Memory/Summaries: implementado
 - Etapa 5 — backend de Projects + Files + Storage privado: implementado
 - Etapa 6 — backend de RAG + pgvector + embedding endpoint: implementado
-- Etapa 1 — frontend canônico Next.js: aguardando a criação do novo projeto Lovable
+- Etapa 7 — backend de Artifacts + versionamento: fundação implementada
 
 ## Etapa 5 — Projects + Files
 
@@ -51,6 +52,12 @@ O RAG usa `public.rag_chunks` para armazenar trechos de arquivos e embeddings de
 A recuperação usa pgvector/HNSW com vetores normalizados e também mantém busca lexical para ranking híbrido. `match_rag_chunks()` filtra por usuário, Project e arquivo, aplica limiar de similaridade e limita o retorno a 50 resultados.
 
 O pipeline esperado é: arquivo → extração de texto → chunking → chunks pendentes → embedding → chunks prontos → recuperação → contexto para o agente. O texto recuperado é sempre tratado como dado não confiável e nunca como instrução de sistema.
+
+## Etapa 7 — Artifacts
+
+A fundação de Artifacts usa `public.artifacts` e `public.artifact_versions` para representar artefatos editáveis e seu histórico de versões. Artefatos podem ser pessoais ou vinculados a Projects/chats. O conteúdo textual por versão é limitado a 10 MiB e protegido por RLS.
+
+A camada visual de editor/preview, renderização e execução isolada ainda pertence à implementação frontend e às etapas posteriores. Execução de código não faz parte desta fundação.
 
 ## Segurança
 

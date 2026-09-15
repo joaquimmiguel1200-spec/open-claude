@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve, relative, isAbsolute } from 'node:path'
 import { spawn } from 'node:child_process'
@@ -24,6 +24,23 @@ function validateRelativePath(filePath: string) {
   }
 }
 
+function validateWorkingDirectory(directory?: string) {
+  const value = directory ?? DEFAULT_WORKDIR
+  if (value !== DEFAULT_WORKDIR && !value.startsWith(`${DEFAULT_WORKDIR}/`)) {
+    throw new Error('Sandbox workingDirectory must remain inside /workspace.')
+  }
+  return value
+}
+
+function validateEnvironment(environment?: Record<string, string>) {
+  for (const [key] of Object.entries(environment ?? {})) {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) throw new Error(`Invalid sandbox environment key: ${key}`)
+    if (/(TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY|SERVICE_ROLE|ACCESS_KEY|AUTH)/i.test(key)) {
+      throw new Error(`Sensitive environment variable is forbidden in sandbox: ${key}`)
+    }
+  }
+}
+
 function buildDockerArgs(request: SandboxRunRequest, workspace: string, limits: Required<SandboxLimits>) {
   const args = [
     'run', '--rm', '--init',
@@ -33,26 +50,25 @@ function buildDockerArgs(request: SandboxRunRequest, workspace: string, limits: 
     '--pids-limit', String(limits.pidsLimit),
     '--memory', `${limits.memoryMb}m`,
     '--cpus', String(limits.cpus),
+    '--tmpfs', '/tmp:rw,nosuid,nodev',
     '--mount', `type=bind,src=${workspace},dst=${DEFAULT_WORKDIR},rw`,
-    '--workdir', request.workingDirectory ?? DEFAULT_WORKDIR,
+    '--workdir', validateWorkingDirectory(request.workingDirectory),
   ]
   if (!request.allowNetwork) args.push('--network', 'none')
-  for (const [key, value] of Object.entries(request.environment ?? {})) {
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) throw new Error(`Invalid sandbox environment key: ${key}`)
-    args.push('--env', `${key}=${value}`)
-  }
+  for (const [key, value] of Object.entries(request.environment ?? {})) args.push('--env', `${key}=${value}`)
   args.push(request.image, ...request.command)
   return args
 }
 
 async function writeWorkspace(root: string, files: SandboxFile[]) {
+  await chmod(root, 0o777)
   for (const file of files) {
     validateRelativePath(file.path)
     const target = resolve(root, file.path)
     const rel = relative(root, target)
     if (rel.startsWith('..') || isAbsolute(rel)) throw new Error(`Sandbox path escapes workspace: ${file.path}`)
-    await mkdir(join(target, '..'), { recursive: true })
-    await writeFile(target, file.content, 'utf8')
+    await mkdir(join(target, '..'), { recursive: true, mode: 0o777 })
+    await writeFile(target, file.content, { encoding: 'utf8', mode: 0o666 })
   }
 }
 
@@ -60,6 +76,7 @@ export function createDockerSandboxRunner(): SandboxRunner {
   return {
     async run(request, signal) {
       validateImage(request.image)
+      validateEnvironment(request.environment)
       if (!request.command.length) throw new Error('Sandbox command is required.')
       const raw = request.limits ?? {}
       const limits: Required<SandboxLimits> = {

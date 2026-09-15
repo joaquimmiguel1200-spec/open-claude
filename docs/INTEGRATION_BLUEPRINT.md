@@ -18,9 +18,11 @@ We do not copy an entire repository into Open Claude. We extract the architectur
 
 ## 3. Open Claude adaptations
 
-### AI Router
+### AI Router — runtime ready
 
-`src/lib/ai/router.ts` provides a provider-neutral server-side interface and fallback loop. OmniRoute is treated as one provider/gateway. No API key is ever exposed to the browser.
+`src/lib/ai/router.ts` now provides a provider-neutral server-side runtime with model selection, adapter dispatch, timeout, bounded retry with jitter, provider/model fallback, streaming, normalized errors, usage, cost calculation, structured logging and caller cancellation. `src/lib/ai/provider-adapter.ts` is the transport abstraction and `src/lib/ai/openai-compatible.ts` implements the OpenAI-compatible/OmniRoute transport.
+
+OmniRoute is treated as one gateway/provider. No API key is exposed to the browser. A real live-provider test still requires a running OmniRoute endpoint and valid upstream credentials.
 
 ### Skills
 
@@ -45,8 +47,9 @@ Chat
       -> Project state
       -> Skills
   -> AI Router
-      -> OmniRoute
-          -> provider/model/fallback
+      -> Provider Adapter
+          -> OmniRoute / OpenAI-compatible provider
+              -> provider/model/fallback
   -> persistence
 ```
 

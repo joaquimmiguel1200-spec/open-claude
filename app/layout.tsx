@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { PrivacyBanner } from './components/privacy'
+import { Analytics, PrivacyBanner } from './components/privacy'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://open-claude.vercel.app'),
@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="pt-BR"><body>{children}<PrivacyBanner /></body></html>
+  return <html lang="pt-BR"><body>{children}<PrivacyBanner /><Analytics /></body></html>
 }

@@ -21,6 +21,15 @@ export function createOmniRouteConfig(): AIProviderConfig | null {
   const baseUrl = process.env.OMNIROUTE_BASE_URL
   if (!baseUrl) return null
 
+  const configuredModel = process.env.AI_MODEL?.trim() || 'auto'
+  const model: AIModel = {
+    id: configuredModel,
+    provider: 'omniroute',
+    displayName: configuredModel === 'auto' ? 'OmniRoute Auto' : configuredModel,
+    free: configuredModel.includes('free'),
+    enabled: true,
+  }
+
   return {
     id: 'omniroute',
     name: 'OmniRoute',
@@ -31,7 +40,7 @@ export function createOmniRouteConfig(): AIProviderConfig | null {
     priority: 10,
     timeoutMs: Number(process.env.AI_TIMEOUT_MS || 120000),
     maxRetries: Number(process.env.AI_MAX_RETRIES || 2),
-    models: [],
+    models: [model],
   }
 }
 

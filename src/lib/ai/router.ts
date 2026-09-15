@@ -1,7 +1,7 @@
 import type { AIProviderConfig, AIRequest, AIResponse, AIStreamEvent } from '@/types/ai'
 import { calculateCost } from './cost'
 import { AIError } from './errors'
-import { completeOpenAICompatible, streamOpenAICompatible } from './openai-compatible'
+import { adapterFor } from './provider-adapter'
 import { rankModels } from './provider-registry'
 
 function apiKeyFor(provider: AIProviderConfig): string | undefined {
@@ -44,10 +44,11 @@ export async function routeAI(request: AIRequest, providers: AIProviderConfig[])
   let lastError: AIError | undefined
   for (const { model, provider } of candidates) {
     const maxRetries = Math.max(0, request.maxRetries ?? provider.maxRetries ?? 2)
+    const adapter = adapterFor(provider)
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         console.info('[ai-router] request', { provider: provider.id, model: model.id, attempt: attempt + 1, stream: false })
-        const response = await completeOpenAICompatible({ provider, model, request, apiKey: apiKeyFor(provider) })
+        const response = await adapter.complete({ provider, model, request, apiKey: apiKeyFor(provider) })
         response.attempts = attempt + 1
         console.info('[ai-router] success', { provider: provider.id, model: model.id, latencyMs: response.latencyMs, usage: response.usage, cost: response.cost })
         return response
@@ -78,11 +79,12 @@ export async function* streamAI(request: AIRequest, providers: AIProviderConfig[
   let lastError: AIError | undefined
   for (const { model, provider } of candidates) {
     const maxRetries = Math.max(0, request.maxRetries ?? provider.maxRetries ?? 2)
+    const adapter = adapterFor(provider)
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       let startedOutput = false
       try {
         console.info('[ai-router] stream request', { provider: provider.id, model: model.id, attempt: attempt + 1 })
-        for await (const event of streamOpenAICompatible({ provider, model, request, apiKey: apiKeyFor(provider) })) {
+        for await (const event of adapter.stream({ provider, model, request, apiKey: apiKeyFor(provider) })) {
           if (event.type === 'delta') startedOutput = true
           if (event.type === 'error' && event.error) {
             lastError = new AIError(event.error)

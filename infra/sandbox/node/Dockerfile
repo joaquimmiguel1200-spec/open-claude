@@ -4,5 +4,3 @@ ENV NODE_ENV=test
 WORKDIR /workspace
 
 USER node
-
-ENTRYPOINT ["node"]

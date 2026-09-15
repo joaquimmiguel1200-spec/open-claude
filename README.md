@@ -1,70 +1,41 @@
 # Open Claude
 
-Open Claude é um agente de IA pessoal em construção, com foco em conversação, projetos, memória, arquivos, RAG, Skills, ferramentas, MCP, GitHub, execução de código e colaboração via Cowork.
+Open Claude é um agente de IA pessoal com foco em conversação, projetos, memória, arquivos, RAG, Skills, ferramentas, MCP, GitHub, execução de código e colaboração via Cowork.
 
-## Arquitetura
+## Stack
 
-- Frontend: Next.js + TypeScript + Tailwind CSS + shadcn/ui
+- Frontend: Next.js 16 + React + TypeScript
 - Backend: Supabase
 - Banco: PostgreSQL + RLS
-- Auth: Supabase Auth
+- Auth: Supabase Auth com sessão SSR
 - Storage: Supabase Storage privado
-- Realtime: Supabase Realtime
-- IA: AI Router configurável, com OmniRoute como gateway compatível
-- RAG: pgvector + Supabase/gte-small
-- Git: GitHub
-- Skills: formato `SKILL.md` com carregamento dinâmico
-- Contexto: memória + summaries + RAG + mensagens recentes, com orçamento progressivo
+- IA: AI Router configurável / OmniRoute
+- RAG: pgvector + embeddings
+- Git: GitHub Agent
+- Skills: `SKILL.md`
+- Segurança: validação Zod, rate limit, RLS, Permission Engine, sandbox, headers, secret scanning e dependency audit
 
-## Roadmap de implementação
+## Status
 
-1. Frontend canônico
-2. AI Router / OmniRoute
-3. Skill Engine
-4. Memory Engine
-5. Context Engine + Token Optimization
-6. Agent Engine
-7. Code Agent
-8. GitHub Agent
-9. Code Execution / Sandbox
-10. Cowork Engine
-11. Skills avançadas
-12. Security + Permissions
-13. Testes gerais
-14. Produção
+A fundação full-stack e os motores de IA foram implementados no repositório. A camada web agora inclui landing page responsiva, autenticação, chat, 404, metadata/OG, favicon, sitemap, robots, consentimento de analytics, headers de segurança e proteção de API.
 
-Cada fase é fechada antes da próxima começar. Dentro da fase autorizada, os subpassos necessários podem ser executados de forma autônoma.
-
-## Status atual
-
-- Frontend canônico Next.js: em execução com agente externo (Kimi)
-- Supabase/Auth/Profiles/Projects/RLS: implementado
-- Chat/Messages: backend implementado
-- Memory/Summaries: backend implementado
-- Projects + Files + Storage privado: implementado
-- RAG + pgvector + embedding endpoint: implementado
-- Artifacts + versionamento: fundação implementada
-- AI Router foundation: implementado
-- OmniRoute adapter/config: implementado
-- Agent Skills loader: implementado
-- Native core-development Skill: implementado
-- Memory relevance ranking: implementado
-- Progressive context packing: implementado
-- Code Agent, Cowork, GitHub Agent e Sandbox: ainda não implementados
-
-## Integrações externas
-
-A arquitetura extrai padrões dos projetos Cowork, Open Claude Code, Claude SEO, Anthropic Skills, Claude-Mem, Token Optimizer e OmniRoute. O código de terceiros não é copiado indiscriminadamente: cada integração passa por análise de licença, compatibilidade e segurança. Consulte `docs/INTEGRATION_BLUEPRINT.md`.
+Os motores internos incluem AI Router, Context, Memory, Skills, Agent, Tool, Permission, GitHub, Code Agent, Sandbox, MCP e Cowork. O E2E de serviços externos ainda depende de credenciais/infraestrutura reais no ambiente de execução.
 
 ## Segurança
 
-- Nunca exponha a service-role key no navegador.
-- Nunca versione `.env` ou segredos.
-- Toda autorização deve ser validada no servidor e/ou por RLS.
-- Ferramentas e ações precisam respeitar o Permission Engine.
-- Conteúdo recuperado de documentos e ferramentas é dado não confiável, nunca instrução de sistema.
-- Execução de código deve ocorrer em sandbox isolado.
+- API keys e service-role ficam somente no servidor.
+- Chaves públicas do Supabase são tratadas como publicáveis; RLS é a fronteira de autorização.
+- Queries usam APIs parametrizadas do Supabase; não há concatenação de SQL em rotas web.
+- Inputs são validados com Zod e respostas públicas são reduzidas ao necessário.
+- Uploads possuem limites de tamanho, MIME e nome.
+- Cookies de sessão usam SSR e flags de transporte apropriadas.
+- HTTPS é reforçado em produção e HSTS é enviado.
+- Segredos são ignorados pelo Git e o CI executa Gitleaks + `npm audit`.
+- Conteúdo recuperado de RAG, Skills, MCP e ferramentas é tratado como não confiável.
+- Execução de código ocorre somente através de sandbox isolado.
 
-## Desenvolvimento
+## Produção
 
-Copie `.env.example` para `.env.local`. O AI Router pode apontar para um gateway OmniRoute local ou para outro provider compatível posteriormente. Não considere funcionalidades futuras implementadas apenas por existirem tipos ou componentes preparados.
+Defina as variáveis de `.env.example` na hospedagem. Configure `NEXT_PUBLIC_SITE_URL` com o domínio definitivo. Para analytics, defina `NEXT_PUBLIC_GA_MEASUREMENT_ID`; o script só é carregado após consentimento.
+
+A hospedagem recomendada para o app Next.js é Vercel, com Supabase para Auth/Database/Storage. O domínio personalizado, DNS e certificados são configurações da conta de hospedagem e não podem ser ativados apenas por commits neste repositório.

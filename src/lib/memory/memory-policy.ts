@@ -11,12 +11,7 @@ export interface MemoryCandidate {
   metadata?: Record<string, unknown>
 }
 
-/**
- * Conservative memory policy for Stage 4.
- * The model may propose memories, but persistence should happen only after
- * application-side validation. Secrets, credentials and sensitive values must
- * never be persisted as ordinary long-term memory.
- */
+/** Application-side guard that runs before any memory reaches persistent storage. */
 export function normalizeMemoryCandidate(candidate: MemoryCandidate): MemoryCandidate {
   return {
     ...candidate,
@@ -27,20 +22,21 @@ export function normalizeMemoryCandidate(candidate: MemoryCandidate): MemoryCand
   }
 }
 
+const FORBIDDEN_PATTERNS = [
+  /password\s*[:=]/i,
+  /passcode\s*[:=]/i,
+  /api[_-]?key\s*[:=]/i,
+  /secret\s*[:=]/i,
+  /access[_-]?token\s*[:=]/i,
+  /refresh[_-]?token\s*[:=]/i,
+  /service[_-]?role/i,
+  /private[_-]?key/i,
+  /authorization\s*:\s*bearer\s+/i,
+  /\b(?:sk|rk|pk)_[A-Za-z0-9_-]{16,}\b/i,
+]
+
 export function shouldPersistMemory(candidate: MemoryCandidate): boolean {
   const content = candidate.content.trim()
-  if (!content) return false
-
-  const forbidden = [
-    'password=',
-    'api_key=',
-    'apikey=',
-    'access_token=',
-    'refresh_token=',
-    'service_role',
-    'private_key',
-  ]
-
-  const lower = content.toLowerCase()
-  return !forbidden.some((token) => lower.includes(token))
+  if (!content || content.length > 2000) return false
+  return !FORBIDDEN_PATTERNS.some((pattern) => pattern.test(content))
 }

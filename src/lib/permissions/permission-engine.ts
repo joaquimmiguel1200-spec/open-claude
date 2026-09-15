@@ -9,8 +9,6 @@ import type {
   PermissionRule,
 } from '@/types/permissions'
 
-const DECISION_RANK: Record<PermissionDecision, number> = { deny: 3, ask: 2, allow: 1 }
-
 function matches(rule: PermissionRule, request: PermissionRequest, now: Date): boolean {
   if (rule.action !== request.action) return false
   if (rule.expiresAt && new Date(rule.expiresAt).getTime() <= now.getTime()) return false
@@ -21,7 +19,7 @@ function matches(rule: PermissionRule, request: PermissionRequest, now: Date): b
 }
 
 function specificity(rule: PermissionRule): number {
-  let score = DECISION_RANK[rule.decision] * 10
+  let score = 0
   if (rule.toolName) score += 30
   if (rule.resource) score += 20
   if (rule.scope === 'session') score += 15
@@ -30,14 +28,19 @@ function specificity(rule: PermissionRule): number {
   return score
 }
 
+function rank(rules: PermissionRule[]): PermissionRule | undefined {
+  const ordered = [...rules].sort((a, b) => specificity(b) - specificity(a))
+  return ordered.find((rule) => rule.decision === 'deny') ?? ordered[0]
+}
+
 export function createPermissionEngine(options: PermissionEngineOptions = {}) {
   const now = options.now ?? (() => new Date())
   const audit: PermissionAuditEvent[] = []
 
   async function resolve(request: PermissionRequest): Promise<PermissionResolution> {
     const rules = options.store ? await options.store.listRules({ userId: request.userId, projectId: request.projectId }) : []
-    const candidates = rules.filter((rule) => matches(rule, request, now())).sort((a, b) => specificity(b) - specificity(a))
-    const rule = candidates[0]
+    const candidates = rules.filter((rule) => matches(rule, request, now()))
+    const rule = rank(candidates)
 
     if (rule) {
       return { decision: rule.decision, rule, reason: rule.reason ?? `Matched ${rule.scope} permission rule.` }

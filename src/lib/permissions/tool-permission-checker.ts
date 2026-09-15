@@ -11,7 +11,7 @@ function actionForTool(tool: ToolDefinition): PermissionAction {
 export function createToolPermissionChecker(engine: PermissionEngine): ToolPermissionChecker {
   return {
     async authorize(tool, context: ToolExecutionContext) {
-      const resolution = await engine.check({
+      return engine.authorize({
         action: actionForTool(tool),
         toolName: tool.name,
         resource: typeof tool.metadata?.resource === 'string' ? tool.metadata.resource : undefined,
@@ -21,7 +21,6 @@ export function createToolPermissionChecker(engine: PermissionEngine): ToolPermi
         runId: context.runId,
         metadata: context.metadata,
       })
-      return resolution.decision === 'allow'
     },
   }
 }

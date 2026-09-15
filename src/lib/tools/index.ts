@@ -1,4 +1,5 @@
 export * from './builtin-tools'
+export * from './default-tool-engine'
 export * from './tool-engine'
 export * from './tool-errors'
 export * from './tool-registry'

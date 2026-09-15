@@ -1,0 +1,5 @@
+'use client'
+
+import { FormEvent, useState } from 'react'
+
+export default function ChatPage(){const [message,setMessage]=useState('');const [answer,setAnswer]=useState('');const [loading,setLoading]=useState(false);async function send(e:FormEvent){e.preventDefault();if(!message.trim())return;setLoading(true);setAnswer('');const res=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message})});const data=await res.json();setAnswer(data.content||data.error||'Sem resposta.');setLoading(false)}return <main className="shell"><nav className="nav"><a className="brand" href="/">OPEN CLAUDE</a><a className="muted" href="/">Início</a></nav><section className="chat"><div className="card"><p className="muted">CHAT</p><h1>O que vamos construir?</h1>{answer&&<div className="card"><p>{answer}</p></div>}<form className="composer" onSubmit={send}><textarea aria-label="Mensagem" maxLength={12000} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Digite sua mensagem…"/><button className="button" disabled={loading}>{loading?'Processando…':'Enviar'}</button></form></div></section></main>}

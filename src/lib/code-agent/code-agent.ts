@@ -1,8 +1,18 @@
-import type { CodeAgentOptions, CodeAgentRequest, CodeAgentResult, CodeValidationResult } from '@/types/code-agent'
+import type {
+  CodeAgentOptions,
+  CodeAgentRequest,
+  CodeAgentResult,
+  CodeAgentRevisionContext,
+  CodeAgentTestResult,
+  CodeEdit,
+  CodeValidationResult,
+} from '@/types/code-agent'
 import type { GitHubClient } from '@/types/github'
+import type { SandboxFile, SandboxRunRequest } from '@/types/sandbox'
 
 const DEFAULT_MAX_FILES = 20
 const DEFAULT_MAX_FILE_SIZE = 1_000_000
+const DEFAULT_MAX_TEST_ITERATIONS = 3
 
 function validateRequest(input: CodeAgentRequest, options: CodeAgentOptions): CodeValidationResult {
   const errors: string[] = []
@@ -27,41 +37,174 @@ function validateRequest(input: CodeAgentRequest, options: CodeAgentOptions): Co
   return { valid: errors.length === 0, errors, warnings }
 }
 
+function mergeSandboxFiles(base: SandboxFile[], edits: CodeEdit[]): SandboxFile[] {
+  const files = new Map(base.map((file) => [file.path, file]))
+  for (const edit of edits) files.set(edit.path.trim().replace(/^\/+/, ''), { path: edit.path.trim().replace(/^\/+/, ''), content: edit.content })
+  return [...files.values()]
+}
+
+async function runSandboxTests(input: CodeAgentRequest, edits: CodeEdit[], options: CodeAgentOptions): Promise<CodeAgentTestResult[]> {
+  if (!input.test) return []
+  const runner = options.sandboxRunner
+  if (!runner) throw new Error('Sandbox runner is required when Code Agent tests are enabled.')
+
+  const config = input.test
+  const files = mergeSandboxFiles(config.files ?? [], edits)
+  const results: CodeAgentTestResult[] = []
+
+  for (const command of config.commands) {
+    if (!command.length) throw new Error('Sandbox test command cannot be empty.')
+    const request: SandboxRunRequest = {
+      image: config.image,
+      command,
+      files,
+      workingDirectory: config.workingDirectory,
+      environment: config.environment,
+      allowNetwork: config.allowNetwork ?? false,
+      limits: {
+        timeoutMs: config.timeoutMs,
+        memoryMb: config.memoryMb,
+        cpus: config.cpus,
+        pidsLimit: config.pidsLimit,
+        maxOutputChars: config.maxOutputChars,
+      },
+    }
+    const result = await runner.run(request)
+    const testResult: CodeAgentTestResult = {
+      command,
+      success: result.status === 'completed' && result.exitCode === 0,
+      status: result.status,
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      durationMs: result.durationMs,
+    }
+    results.push(testResult)
+    if (!testResult.success) break
+  }
+  return results
+}
+
+function failedTests(tests: CodeAgentTestResult[]) {
+  return tests.filter((test) => !test.success)
+}
+
 export function createCodeAgent(client: GitHubClient, options: CodeAgentOptions = {}) {
   async function run(input: CodeAgentRequest): Promise<CodeAgentResult> {
-    const validation = validateRequest(input, options)
-    if (!validation.valid) return { success: false, repository: input.repository, branch: input.branch, changes: [], validation, error: 'Code Agent request validation failed.' }
+    let edits = input.edits
+    let validation = validateRequest({ ...input, edits }, options)
+    if (!validation.valid) {
+      return { success: false, repository: input.repository, branch: input.branch, changes: [], validation, error: 'Code Agent request validation failed.' }
+    }
 
-    const [owner, repo] = input.repository.split('/')
-    const changes = [] as CodeAgentResult['changes']
+    const maxIterations = input.test ? Math.max(1, options.maxTestIterations ?? DEFAULT_MAX_TEST_ITERATIONS) : 1
+    let tests: CodeAgentTestResult[] = []
 
     try {
-      for (const edit of input.edits) {
-        const path = edit.path.trim().replace(/^\/+/, '')
-        let previousSha: string | undefined
-        if (edit.kind === 'update') {
-          const current = await client.getFile(owner, repo, path, input.branch)
-          previousSha = current.sha
-          if (current.sha !== edit.expectedSha) throw new Error(`Stale file SHA for ${path}. Expected ${edit.expectedSha}, current ${current.sha}.`)
-        } else {
-          try {
-            const current = await client.getFile(owner, repo, path, input.branch)
-            throw new Error(`Refusing to overwrite existing file ${path}; current SHA is ${current.sha}.`)
-          } catch (error) {
-            if (error instanceof Error && /API 404/.test(error.message)) {
-              // expected for a new file
-            } else if (error instanceof Error && error.message.includes('GitHub API 404')) {
-              // expected for a new file
-            } else throw error
+      for (let iteration = 1; iteration <= maxIterations; iteration++) {
+        if (input.test) {
+          tests = await runSandboxTests(input, edits, options)
+          const failures = failedTests(tests)
+          if (failures.length > 0) {
+            if (!options.revise || iteration >= maxIterations) {
+              return {
+                success: false,
+                repository: input.repository,
+                branch: input.branch,
+                changes: [],
+                validation,
+                tests,
+                iterations: iteration,
+                error: `Sandbox validation failed after ${iteration} iteration(s).`,
+              }
+            }
+            const revisionContext: CodeAgentRevisionContext = {
+              iteration,
+              edits,
+              tests,
+              goal: input.goal,
+            }
+            const revised = await options.revise(revisionContext)
+            if (!revised?.length) {
+              return {
+                success: false,
+                repository: input.repository,
+                branch: input.branch,
+                changes: [],
+                validation,
+                tests,
+                iterations: iteration,
+                error: 'Sandbox tests failed and no revised edits were produced.',
+              }
+            }
+            edits = revised
+            validation = validateRequest({ ...input, edits }, options)
+            if (!validation.valid) {
+              return {
+                success: false,
+                repository: input.repository,
+                branch: input.branch,
+                changes: [],
+                validation,
+                tests,
+                iterations: iteration,
+                error: 'Revised Code Agent edits failed validation.',
+              }
+            }
+            continue
           }
         }
-        await client.createOrUpdateFile(owner, repo, path, edit.content, input.commitMessage, input.branch, previousSha)
-        changes.push({ path, kind: edit.kind, previousSha, content: edit.content })
+
+        const [owner, repo] = input.repository.split('/')
+        const changes = [] as CodeAgentResult['changes']
+        let lastCommitSha: string | undefined
+
+        for (const edit of edits) {
+          const path = edit.path.trim().replace(/^\/+/, '')
+          let previousSha: string | undefined
+          if (edit.kind === 'update') {
+            const current = await client.getFile(owner, repo, path, input.branch)
+            previousSha = current.sha
+            if (current.sha !== edit.expectedSha) {
+              throw new Error(`Stale file SHA for ${path}. Expected ${edit.expectedSha}, current ${current.sha}.`)
+            }
+          } else {
+            try {
+              const current = await client.getFile(owner, repo, path, input.branch)
+              throw new Error(`Refusing to overwrite existing file ${path}; current SHA is ${current.sha}.`)
+            } catch (error) {
+              if (!(error instanceof Error) || !/GitHub API 404|API 404/.test(error.message)) throw error
+            }
+          }
+          lastCommitSha = await client.createOrUpdateFile(owner, repo, path, edit.content, input.commitMessage, input.branch, previousSha)
+          changes.push({ path, kind: edit.kind, previousSha, content: edit.content })
+        }
+
+        return {
+          success: true,
+          repository: input.repository,
+          branch: input.branch,
+          changes,
+          validation,
+          tests,
+          iterations: iteration,
+          commitSha: lastCommitSha,
+        }
       }
-      return { success: true, repository: input.repository, branch: input.branch, changes, validation, commitSha: undefined }
+
+      return { success: false, repository: input.repository, branch: input.branch, changes: [], validation, tests, error: 'Code Agent test loop exhausted.' }
     } catch (error) {
-      return { success: false, repository: input.repository, branch: input.branch, changes, validation, error: error instanceof Error ? error.message : 'Code Agent execution failed.' }
+      return {
+        success: false,
+        repository: input.repository,
+        branch: input.branch,
+        changes: [],
+        validation,
+        tests,
+        error: error instanceof Error ? error.message : 'Code Agent execution failed.',
+      }
     }
   }
+
   return { run }
 }

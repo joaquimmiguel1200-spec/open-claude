@@ -1,6 +1,6 @@
 # Open Claude
 
-Open Claude é um agente de IA pessoal em construção, com foco em conversação, projetos, memória, arquivos, RAG, ferramentas, MCP, GitHub, execução de código e colaboração via Cowork.
+Open Claude é um agente de IA pessoal em construção, com foco em conversação, projetos, memória, arquivos, RAG, Skills, ferramentas, MCP, GitHub, execução de código e colaboração via Cowork.
 
 ## Arquitetura
 
@@ -10,54 +10,51 @@ Open Claude é um agente de IA pessoal em construção, com foco em conversaçã
 - Auth: Supabase Auth
 - Storage: Supabase Storage privado
 - Realtime: Supabase Realtime
-- IA: camada de provedor configurável, inicialmente orientada ao Lovable API
+- IA: AI Router configurável, com OmniRoute como gateway compatível
 - RAG: pgvector + Supabase/gte-small
 - Git: GitHub
+- Skills: formato `SKILL.md` com carregamento dinâmico
+- Contexto: memória + summaries + RAG + mensagens recentes, com orçamento progressivo
 
-## Etapas
+## Roadmap de implementação
 
-1. Fundação
-2. Supabase + Auth
-3. Chat
-4. Memória
-5. Projects + Files
-6. RAG
-7. Artifacts
-8. MCP + Tools
-9. GitHub Agent
-10. Code Execution
-11. Cowork
-12. Security + Autonomy
+1. Frontend canônico
+2. AI Router / OmniRoute
+3. Skill Engine
+4. Memory Engine
+5. Context Engine + Token Optimization
+6. Agent Engine
+7. Code Agent
+8. GitHub Agent
+9. Code Execution / Sandbox
+10. Cowork Engine
+11. Skills avançadas
+12. Security + Permissions
+13. Testes gerais
+14. Produção
+
+Cada fase é fechada antes da próxima começar. Dentro da fase autorizada, os subpassos necessários podem ser executados de forma autônoma.
 
 ## Status atual
 
-- Etapa 1 — frontend canônico Next.js: em execução com agente de código externo (Kimi); Lovable não é obrigatório para o frontend canônico
-- Etapa 2 — backend de Auth/Profiles/Projects/RLS: implementado
-- Etapa 3 — backend de Chat/Messages: implementado
-- Etapa 4 — backend de Memory/Summaries: implementado
-- Etapa 5 — backend de Projects + Files + Storage privado: implementado
-- Etapa 6 — backend de RAG + pgvector + embedding endpoint: implementado
-- Etapa 7 — backend de Artifacts + versionamento: fundação implementada
+- Frontend canônico Next.js: em execução com agente externo (Kimi)
+- Supabase/Auth/Profiles/Projects/RLS: implementado
+- Chat/Messages: backend implementado
+- Memory/Summaries: backend implementado
+- Projects + Files + Storage privado: implementado
+- RAG + pgvector + embedding endpoint: implementado
+- Artifacts + versionamento: fundação implementada
+- AI Router foundation: implementado
+- OmniRoute adapter/config: implementado
+- Agent Skills loader: implementado
+- Native core-development Skill: implementado
+- Memory relevance ranking: implementado
+- Progressive context packing: implementado
+- Code Agent, Cowork, GitHub Agent e Sandbox: ainda não implementados
 
-## Etapa 5 — Projects + Files
+## Integrações externas
 
-Projects são o limite de workspace para chats, memória e arquivos, com papéis `owner`, `editor` e `viewer`.
-
-Arquivos possuem um catálogo em `public.files` e bytes em um bucket privado `open-claude-files`. O catálogo guarda dono, projeto/chat, nome, pasta virtual, MIME, tamanho, checksum, origem e caminho de Storage. A autorização é aplicada por RLS no banco e por políticas em `storage.objects`.
-
-## Etapa 6 — RAG
-
-O RAG usa `public.rag_chunks` para armazenar trechos de arquivos e embeddings de 384 dimensões. O modelo inicial é `Supabase/gte-small`, executado diretamente em uma Edge Function autenticada, sem depender de uma API externa de embeddings.
-
-A recuperação usa pgvector/HNSW com vetores normalizados e também mantém busca lexical para ranking híbrido. `match_rag_chunks()` filtra por usuário, Project e arquivo, aplica limiar de similaridade e limita o retorno a 50 resultados.
-
-O pipeline esperado é: arquivo → extração de texto → chunking → chunks pendentes → embedding → chunks prontos → recuperação → contexto para o agente. O texto recuperado é sempre tratado como dado não confiável e nunca como instrução de sistema.
-
-## Etapa 7 — Artifacts
-
-A fundação de Artifacts usa `public.artifacts` e `public.artifact_versions` para representar artefatos editáveis e seu histórico de versões. Artefatos podem ser pessoais ou vinculados a Projects/chats. O conteúdo textual por versão é limitado a 10 MiB e protegido por RLS.
-
-A camada visual de editor/preview, renderização e execução isolada ainda pertence à implementação frontend e às etapas posteriores. Execução de código não faz parte desta fundação.
+A arquitetura extrai padrões dos projetos Cowork, Open Claude Code, Claude SEO, Anthropic Skills, Claude-Mem, Token Optimizer e OmniRoute. O código de terceiros não é copiado indiscriminadamente: cada integração passa por análise de licença, compatibilidade e segurança. Consulte `docs/INTEGRATION_BLUEPRINT.md`.
 
 ## Segurança
 
@@ -65,9 +62,9 @@ A camada visual de editor/preview, renderização e execução isolada ainda per
 - Nunca versione `.env` ou segredos.
 - Toda autorização deve ser validada no servidor e/ou por RLS.
 - Ferramentas e ações precisam respeitar o Permission Engine.
-- Conteúdo recuperado de documentos é dado não confiável, nunca instrução de sistema.
+- Conteúdo recuperado de documentos e ferramentas é dado não confiável, nunca instrução de sistema.
 - Execução de código deve ocorrer em sandbox isolado.
 
 ## Desenvolvimento
 
-Copie `.env.example` para `.env.local` e preencha as configurações locais. O repositório será evoluído por etapas; não considere funcionalidades futuras implementadas apenas por existirem tipos ou componentes preparados.
+Copie `.env.example` para `.env.local`. O AI Router pode apontar para um gateway OmniRoute local ou para outro provider compatível posteriormente. Não considere funcionalidades futuras implementadas apenas por existirem tipos ou componentes preparados.

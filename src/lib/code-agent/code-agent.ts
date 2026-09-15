@@ -39,7 +39,10 @@ function validateRequest(input: CodeAgentRequest, options: CodeAgentOptions): Co
 
 function mergeSandboxFiles(base: SandboxFile[], edits: CodeEdit[]): SandboxFile[] {
   const files = new Map(base.map((file) => [file.path, file]))
-  for (const edit of edits) files.set(edit.path.trim().replace(/^\/+/, ''), { path: edit.path.trim().replace(/^\/+/, ''), content: edit.content })
+  for (const edit of edits) {
+    const path = edit.path.trim().replace(/^\/+/, '')
+    files.set(path, { path, content: edit.content })
+  }
   return [...files.values()]
 }
 
@@ -118,12 +121,7 @@ export function createCodeAgent(client: GitHubClient, options: CodeAgentOptions 
                 error: `Sandbox validation failed after ${iteration} iteration(s).`,
               }
             }
-            const revisionContext: CodeAgentRevisionContext = {
-              iteration,
-              edits,
-              tests,
-              goal: input.goal,
-            }
+            const revisionContext: CodeAgentRevisionContext = { iteration, edits, tests, goal: input.goal }
             const revised = await options.revise(revisionContext)
             if (!revised?.length) {
               return {
@@ -176,7 +174,8 @@ export function createCodeAgent(client: GitHubClient, options: CodeAgentOptions 
               if (!(error instanceof Error) || !/GitHub API 404|API 404/.test(error.message)) throw error
             }
           }
-          lastCommitSha = await client.createOrUpdateFile(owner, repo, path, edit.content, input.commitMessage, input.branch, previousSha)
+          const commit = await client.createOrUpdateFile(owner, repo, path, edit.content, input.commitMessage, input.branch, previousSha)
+          lastCommitSha = commit.commitSha
           changes.push({ path, kind: edit.kind, previousSha, content: edit.content })
         }
 

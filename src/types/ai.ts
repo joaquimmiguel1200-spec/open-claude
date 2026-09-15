@@ -27,6 +27,46 @@ export interface AIRequest {
   temperature?: number
   maxTokens?: number
   stream?: boolean
+  signal?: AbortSignal
+  timeoutMs?: number
+  maxRetries?: number
+  metadata?: Record<string, unknown>
+}
+
+export interface AIUsage {
+  inputTokens?: number
+  outputTokens?: number
+  totalTokens?: number
+}
+
+export interface AICost {
+  input?: number
+  output?: number
+  total?: number
+  currency: 'USD'
+}
+
+export type AIErrorCode =
+  | 'INVALID_REQUEST'
+  | 'AUTHENTICATION'
+  | 'AUTHORIZATION'
+  | 'RATE_LIMIT'
+  | 'TIMEOUT'
+  | 'CANCELLED'
+  | 'PROVIDER_UNAVAILABLE'
+  | 'UPSTREAM_ERROR'
+  | 'EMPTY_RESPONSE'
+  | 'NO_PROVIDER'
+  | 'INTERNAL'
+
+export interface AIErrorShape {
+  code: AIErrorCode
+  message: string
+  provider?: string
+  model?: string
+  status?: number
+  retryable: boolean
+  cause?: unknown
 }
 
 export interface AIResponse {
@@ -34,9 +74,23 @@ export interface AIResponse {
   model: string
   provider: string
   content: string
-  inputTokens?: number
-  outputTokens?: number
+  usage?: AIUsage
+  cost?: AICost
   finishReason?: string
+  latencyMs?: number
+  attempts?: number
+}
+
+export interface AIStreamEvent {
+  type: 'start' | 'delta' | 'usage' | 'done' | 'error'
+  id?: string
+  provider?: string
+  model?: string
+  delta?: string
+  usage?: AIUsage
+  cost?: AICost
+  finishReason?: string
+  error?: AIErrorShape
 }
 
 export interface AIProviderConfig {
@@ -47,5 +101,7 @@ export interface AIProviderConfig {
   apiKeyEnv?: string
   enabled: boolean
   priority: number
+  timeoutMs?: number
+  maxRetries?: number
   models: AIModel[]
 }

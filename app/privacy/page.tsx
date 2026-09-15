@@ -1,0 +1,2 @@
+export const metadata={title:'Privacidade'}
+export default function Privacy(){return <main className="shell"><div className="chat card"><h1>Privacidade</h1><p>O Open Claude usa Supabase Auth para autenticação e cookies de sessão. Analytics é opcional e só é carregado após consentimento.</p><p>Chaves de provedores de IA e credenciais administrativas permanecem no servidor e não fazem parte do bundle do navegador.</p></div></main>}

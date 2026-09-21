@@ -3,6 +3,7 @@ import { z } from 'zod'
 export const chatInputSchema = z.object({
   message: z.string().trim().min(1).max(12000),
   model: z.string().trim().max(120).optional(),
+  stream: z.boolean().optional().default(false),
   honeypot: z.string().max(200).optional().default(''),
 }).strict()
 

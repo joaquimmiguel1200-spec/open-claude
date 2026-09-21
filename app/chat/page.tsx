@@ -2,4 +2,51 @@
 
 import { FormEvent, useState } from 'react'
 
-export default function ChatPage(){const [message,setMessage]=useState('');const [answer,setAnswer]=useState('');const [loading,setLoading]=useState(false);async function send(e:FormEvent){e.preventDefault();if(!message.trim())return;setLoading(true);setAnswer('');const res=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message,honeypot:''})});const data=await res.json();setAnswer(data.content||data.error||'Sem resposta.');setLoading(false)}return <main className="shell"><nav className="nav"><a className="brand" href="/">OPEN CLAUDE</a><a className="muted" href="/">Início</a></nav><section className="chat"><div className="card"><p className="muted">CHAT</p><h1>O que vamos construir?</h1>{answer&&<div className="card"><p>{answer}</p></div>}<form className="composer" onSubmit={send}><input aria-hidden="true" tabIndex={-1} autoComplete="off" name="website" style={{position:'absolute',left:'-10000px',width:1,height:1,opacity:0}}/><textarea aria-label="Mensagem" maxLength={12000} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Digite sua mensagem…"/><button className="button" disabled={loading}>{loading?'Processando…':'Enviar'}</button></form></div></section></main>}
+export default function ChatPage(){
+  const [message,setMessage]=useState('')
+  const [answer,setAnswer]=useState('')
+  const [loading,setLoading]=useState(false)
+
+  async function send(e:FormEvent){
+    e.preventDefault()
+    if(!message.trim()||loading)return
+    setLoading(true)
+    setAnswer('')
+    try{
+      const res=await fetch('/api/chat',{
+        method:'POST',
+        headers:{'content-type':'application/json',accept:'text/event-stream'},
+        body:JSON.stringify({message,honeypot:'',stream:true})
+      })
+      if(!res.ok){
+        const data=await res.json().catch(()=>({}))
+        setAnswer(data.error||'Não foi possível processar a solicitação.')
+        return
+      }
+      if(!res.body){setAnswer('Sem resposta do servidor.');return}
+      const reader=res.body.getReader()
+      const decoder=new TextDecoder()
+      let buffer=''
+      while(true){
+        const {done,value}=await reader.read()
+        if(done)break
+        buffer+=decoder.decode(value,{stream:true})
+        const frames=buffer.split('\n\n')
+        buffer=frames.pop()||''
+        for(const frame of frames){
+          const line=frame.split('\n').find((item)=>item.startsWith('data: '))
+          if(!line)continue
+          try{
+            const event=JSON.parse(line.slice(6))
+            if(event.type==='delta')setAnswer((current)=>current+event.delta)
+            if(event.type==='error')setAnswer((current)=>current||event.error?.message||'Erro no modelo.')
+          }catch{}
+        }
+      }
+    }catch{
+      setAnswer('Erro de conexão.')
+    }finally{setLoading(false)}
+  }
+
+  return <main className="shell"><nav className="nav"><a className="brand" href="/">OPEN CLAUDE</a><a className="muted" href="/">Início</a></nav><section className="chat"><div className="card"><p className="muted">CHAT</p><h1>O que vamos construir?</h1>{answer&&<div className="card"><p>{answer}</p></div>}<form className="composer" onSubmit={send}><input aria-hidden="true" tabIndex={-1} autoComplete="off" name="website" style={{position:'absolute',left:'-10000px',width:1,height:1,opacity:0}}/><textarea aria-label="Mensagem" maxLength={12000} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Digite sua mensagem…"/><button className="button" disabled={loading}>{loading?'Processando…':'Enviar'}</button></form></div></section></main>
+}

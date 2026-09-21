@@ -17,26 +17,30 @@ export function rankModels(providers: AIProviderConfig[], strategy: AIRoutingStr
   })
 }
 
-export function createOmniRouteConfig(): AIProviderConfig | null {
-  const baseUrl = process.env.OMNIROUTE_BASE_URL
-  if (!baseUrl) return null
+const DEFAULT_OPENROUTER_MODEL = 'nvidia/nemotron-3-ultra-550b-a55b-20260604:free'
+const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 
-  const configuredModel = process.env.AI_MODEL?.trim() || 'auto'
+export function createOmniRouteConfig(): AIProviderConfig | null {
+  if ((process.env.AI_PROVIDER ?? 'omniroute').trim().toLowerCase() !== 'omniroute') return null
+  if (process.env.OMNIROUTE_ENABLED === 'false') return null
+
+  const baseUrl = (process.env.OMNIROUTE_BASE_URL || DEFAULT_OPENROUTER_BASE_URL).trim()
+  const configuredModel = process.env.AI_MODEL?.trim() || DEFAULT_OPENROUTER_MODEL
   const model: AIModel = {
     id: configuredModel,
     provider: 'omniroute',
-    displayName: configuredModel === 'auto' ? 'OmniRoute Auto' : configuredModel,
-    free: configuredModel.includes('free'),
+    displayName: configuredModel,
+    free: configuredModel.endsWith(':free') || configuredModel.includes(':free'),
     enabled: true,
   }
 
   return {
     id: 'omniroute',
-    name: 'OmniRoute',
+    name: 'OmniRoute / OpenRouter',
     kind: 'omniroute',
     baseUrl: baseUrl.replace(/\/$/, ''),
     apiKeyEnv: 'OMNIROUTE_API_KEY',
-    enabled: process.env.OMNIROUTE_ENABLED !== 'false',
+    enabled: true,
     priority: 10,
     timeoutMs: Number(process.env.AI_TIMEOUT_MS || 120000),
     maxRetries: Number(process.env.AI_MAX_RETRIES || 2),

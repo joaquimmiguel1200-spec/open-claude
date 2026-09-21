@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server'
 import { generateAI, streamAIResponse } from '@/src/lib/ai'
+import type { AIRoutingStrategy } from '@/src/types/ai'
 import { requireUser } from '@/src/lib/supabase/server'
 import { chatInputSchema, rejectBotHoneypot } from '@/src/lib/security/input'
 import { clientKey, rateLimit } from '@/src/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
+
+const routingStrategies: AIRoutingStrategy[] = ['auto', 'quality', 'cost', 'latency', 'free']
+function configuredStrategy(): AIRoutingStrategy {
+  const value = process.env.AI_ROUTING_STRATEGY?.trim() as AIRoutingStrategy | undefined
+  return value && routingStrategies.includes(value) ? value : 'free'
+}
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +25,7 @@ export async function POST(request: Request) {
     const aiRequest = {
       messages: [{ role: 'user' as const, content: parsed.data.message }],
       model: parsed.data.model,
-      strategy: 'free' as const,
+      strategy: configuredStrategy(),
       stream: true,
       signal: request.signal,
       metadata: { userId: user.id },

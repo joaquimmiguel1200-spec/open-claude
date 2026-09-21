@@ -1,4 +1,4 @@
-export type AIProviderKind = 'openai-compatible' | 'anthropic-compatible' | 'omniroute'
+export type AIProviderKind = 'openai-compatible' | 'anthropic-compatible' | 'omniroute' | 'openrouter'
 
 export type AIRoutingStrategy = 'auto' | 'quality' | 'cost' | 'latency' | 'free'
 

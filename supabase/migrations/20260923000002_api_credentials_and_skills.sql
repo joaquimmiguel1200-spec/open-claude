@@ -42,15 +42,24 @@ create table if not exists public.user_skills (
 alter table public.api_credentials enable row level security;
 alter table public.skills enable row level security;
 alter table public.user_skills enable row level security;
-create policy if not exists "api_credentials_owner_select" on public.api_credentials for select to authenticated using ((select auth.uid())=user_id);
-create policy if not exists "api_credentials_owner_insert" on public.api_credentials for insert to authenticated with check ((select auth.uid())=user_id);
-create policy if not exists "api_credentials_owner_update" on public.api_credentials for update to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
-create policy if not exists "api_credentials_owner_delete" on public.api_credentials for delete to authenticated using ((select auth.uid())=user_id);
-create policy if not exists "skills_builtin_or_owner_select" on public.skills for select to authenticated using (owner_id is null or owner_id=(select auth.uid()));
-create policy if not exists "skills_owner_insert" on public.skills for insert to authenticated with check ((select auth.uid())=owner_id);
-create policy if not exists "skills_owner_update" on public.skills for update to authenticated using ((select auth.uid())=owner_id) with check ((select auth.uid())=owner_id);
-create policy if not exists "skills_owner_delete" on public.skills for delete to authenticated using ((select auth.uid())=owner_id);
-create policy if not exists "user_skills_owner_all" on public.user_skills for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+drop policy if exists "api_credentials_owner_select" on public.api_credentials for select to authenticated using ((select auth.uid())=user_id);
+create policy "api_credentials_owner_select" on public.api_credentials for select to authenticated using ((select auth.uid())=user_id);
+drop policy if exists "api_credentials_owner_insert" on public.api_credentials for insert to authenticated with check ((select auth.uid())=user_id);
+create policy "api_credentials_owner_insert" on public.api_credentials for insert to authenticated with check ((select auth.uid())=user_id);
+drop policy if exists "api_credentials_owner_update" on public.api_credentials for update to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+create policy "api_credentials_owner_update" on public.api_credentials for update to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+drop policy if exists "api_credentials_owner_delete" on public.api_credentials for delete to authenticated using ((select auth.uid())=user_id);
+create policy "api_credentials_owner_delete" on public.api_credentials for delete to authenticated using ((select auth.uid())=user_id);
+drop policy if exists "skills_builtin_or_owner_select" on public.skills for select to authenticated using (owner_id is null or owner_id=(select auth.uid()));
+create policy "skills_builtin_or_owner_select" on public.skills for select to authenticated using (owner_id is null or owner_id=(select auth.uid()));
+drop policy if exists "skills_owner_insert" on public.skills for insert to authenticated with check ((select auth.uid())=owner_id);
+create policy "skills_owner_insert" on public.skills for insert to authenticated with check ((select auth.uid())=owner_id);
+drop policy if exists "skills_owner_update" on public.skills for update to authenticated using ((select auth.uid())=owner_id) with check ((select auth.uid())=owner_id);
+create policy "skills_owner_update" on public.skills for update to authenticated using ((select auth.uid())=owner_id) with check ((select auth.uid())=owner_id);
+drop policy if exists "skills_owner_delete" on public.skills for delete to authenticated using ((select auth.uid())=owner_id);
+create policy "skills_owner_delete" on public.skills for delete to authenticated using ((select auth.uid())=owner_id);
+drop policy if exists "user_skills_owner_all" on public.user_skills for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
+create policy "user_skills_owner_all" on public.user_skills for all to authenticated using ((select auth.uid())=user_id) with check ((select auth.uid())=user_id);
 
 -- Built-in catalog: inspired by public Agent Skills patterns and the open repositories reviewed for Open Claude.
 insert into public.skills(owner_id,name,description,instructions,source,enabled,version,tags)

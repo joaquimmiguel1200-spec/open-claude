@@ -1,109 +1,12 @@
-import type { AIProviderConfig, AIRequest, AIResponse, AIStreamEvent } from '@/types/ai'
+import type { AIProviderConfig,AIRequest,AIResponse,AIStreamEvent } from '@/types/ai'
 import { calculateCost } from './cost'
 import { AIError } from './errors'
 import { adapterFor } from './provider-adapter'
 import { rankModels } from './provider-registry'
-
-function apiKeyFor(provider: AIProviderConfig): string | undefined {
-  return provider.apiKeyEnv ? process.env[provider.apiKeyEnv] : undefined
-}
-
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, ms)
-    if (!signal) return
-    const abort = () => {
-      clearTimeout(timer)
-      reject(new AIError({ code: 'CANCELLED', message: 'AI retry wait cancelled.', retryable: false }))
-    }
-    if (signal.aborted) abort()
-    else signal.addEventListener('abort', abort, { once: true })
-  })
-}
-
-function retryDelay(attempt: number): number {
-  const base = Math.min(4000, 250 * 2 ** attempt)
-  return Math.round(base * (0.75 + Math.random() * 0.5))
-}
-
-function candidatesFor(request: AIRequest, providers: AIProviderConfig[]) {
-  const enabled = providers.filter((p) => p.enabled)
-  const ranked = rankModels(enabled, request.strategy ?? 'auto')
-  const selected = request.model ? ranked.filter((m) => m.id === request.model) : ranked
-  return selected
-    .map((model) => ({ model, provider: enabled.find((p) => p.id === model.provider) }))
-    .filter((item): item is { model: typeof item.model; provider: AIProviderConfig } => Boolean(item.provider))
-}
-
-export async function routeAI(request: AIRequest, providers: AIProviderConfig[]): Promise<AIResponse> {
-  if (!request.messages.length) throw new AIError({ code: 'INVALID_REQUEST', message: 'At least one message is required.', retryable: false })
-
-  const candidates = candidatesFor(request, providers)
-  if (!candidates.length) throw new AIError({ code: 'NO_PROVIDER', message: 'No AI model is available for this request.', retryable: false })
-
-  let lastError: AIError | undefined
-  for (const { model, provider } of candidates) {
-    const maxRetries = Math.max(0, request.maxRetries ?? provider.maxRetries ?? 2)
-    const adapter = adapterFor(provider)
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        console.info('[ai-router] request', { provider: provider.id, model: model.id, attempt: attempt + 1, stream: false })
-        const response = await adapter.complete({ provider, model, request, apiKey: apiKeyFor(provider) })
-        response.attempts = attempt + 1
-        console.info('[ai-router] success', { provider: provider.id, model: model.id, latencyMs: response.latencyMs, usage: response.usage, cost: response.cost })
-        return response
-      } catch (error) {
-        lastError = error instanceof AIError ? error : new AIError({ code: 'INTERNAL', message: 'AI request failed.', retryable: false, cause: error, provider: provider.id, model: model.id })
-        console.warn('[ai-router] failure', { provider: provider.id, model: model.id, attempt: attempt + 1, code: lastError.code, retryable: lastError.retryable })
-        if (lastError.code === 'CANCELLED' || !lastError.retryable || attempt >= maxRetries) break
-        await sleep(retryDelay(attempt), request.signal)
-      }
-    }
-  }
-
-  throw lastError ?? new AIError({ code: 'PROVIDER_UNAVAILABLE', message: 'All configured AI providers failed.', retryable: true })
-}
-
-export async function* streamAI(request: AIRequest, providers: AIProviderConfig[]): AsyncGenerator<AIStreamEvent> {
-  if (!request.messages.length) {
-    yield { type: 'error', error: new AIError({ code: 'INVALID_REQUEST', message: 'At least one message is required.', retryable: false }).toJSON() }
-    return
-  }
-
-  const candidates = candidatesFor(request, providers)
-  if (!candidates.length) {
-    yield { type: 'error', error: new AIError({ code: 'NO_PROVIDER', message: 'No AI model is available for this request.', retryable: false }).toJSON() }
-    return
-  }
-
-  let lastError: AIError | undefined
-  for (const { model, provider } of candidates) {
-    const maxRetries = Math.max(0, request.maxRetries ?? provider.maxRetries ?? 2)
-    const adapter = adapterFor(provider)
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      let startedOutput = false
-      try {
-        console.info('[ai-router] stream request', { provider: provider.id, model: model.id, attempt: attempt + 1 })
-        for await (const event of adapter.stream({ provider, model, request, apiKey: apiKeyFor(provider) })) {
-          if (event.type === 'delta') startedOutput = true
-          if (event.type === 'error' && event.error) {
-            lastError = new AIError(event.error)
-            throw lastError
-          }
-          yield event
-        }
-        console.info('[ai-router] stream success', { provider: provider.id, model: model.id, attempt: attempt + 1 })
-        return
-      } catch (error) {
-        lastError = error instanceof AIError ? error : new AIError({ code: 'INTERNAL', message: 'AI stream failed.', retryable: false, cause: error, provider: provider.id, model: model.id })
-        console.warn('[ai-router] stream failure', { provider: provider.id, model: model.id, attempt: attempt + 1, code: lastError.code, startedOutput })
-        if (lastError.code === 'CANCELLED' || startedOutput || !lastError.retryable || attempt >= maxRetries) break
-        await sleep(retryDelay(attempt), request.signal)
-      }
-    }
-  }
-
-  yield { type: 'error', error: (lastError ?? new AIError({ code: 'PROVIDER_UNAVAILABLE', message: 'All configured AI providers failed.', retryable: true })).toJSON() }
-}
-
+function apiKeyFor(provider:AIProviderConfig){return provider.apiKey??(provider.apiKeyEnv?process.env[provider.apiKeyEnv]:undefined)}
+function sleep(ms:number,signal?:AbortSignal):Promise<void>{return new Promise((resolve,reject)=>{const timer=setTimeout(resolve,ms);if(!signal)return;const abort=()=>{clearTimeout(timer);reject(new AIError({code:'CANCELLED',message:'AI retry wait cancelled.',retryable:false}))};if(signal.aborted)abort();else signal.addEventListener('abort',abort,{once:true})})}
+function retryDelay(attempt:number){return Math.round(Math.min(4000,250*2**attempt)*(0.75+Math.random()*0.5))}
+function candidatesFor(request:AIRequest,providers:AIProviderConfig[]){const enabled=providers.filter(p=>p.enabled);const ranked=rankModels(enabled,request.strategy??'auto');const selected=request.model?ranked.filter(m=>m.id===request.model):ranked;return selected.map(model=>({model,provider:enabled.find(p=>p.id===model.provider)})).filter((x):x is {model:typeof x.model;provider:AIProviderConfig}=>Boolean(x.provider))}
+export async function routeAI(request:AIRequest,providers:AIProviderConfig[]):Promise<AIResponse>{if(!request.messages.length)throw new AIError({code:'INVALID_REQUEST',message:'At least one message is required.',retryable:false});const candidates=candidatesFor(request,providers);if(!candidates.length)throw new AIError({code:'NO_PROVIDER',message:'No AI model is available for this request.',retryable:false});let lastError:AIError|undefined;for(const {model,provider} of candidates){const maxRetries=Math.max(0,request.maxRetries??provider.maxRetries??2);const adapter=adapterFor(provider);for(let attempt=0;attempt<=maxRetries;attempt++){try{console.info('[ai-router] request',{provider:provider.id,model:model.id,attempt:attempt+1,stream:false});const response=await adapter.complete({provider,model,request,apiKey:apiKeyFor(provider)});response.attempts=attempt+1;console.info('[ai-router] success',{provider:provider.id,model:model.id,latencyMs:response.latencyMs,usage:response.usage,cost:response.cost});return response}catch(error){lastError=error instanceof AIError?error:new AIError({code:'INTERNAL',message:'AI request failed.',retryable:false,cause:error,provider:provider.id,model:model.id});console.warn('[ai-router] failure',{provider:provider.id,model:model.id,attempt:attempt+1,code:lastError.code,retryable:lastError.retryable});if(lastError.code==='CANCELLED'||!lastError.retryable||attempt>=maxRetries)break;await sleep(retryDelay(attempt),request.signal)}}}throw lastError??new AIError({code:'PROVIDER_UNAVAILABLE',message:'All configured AI providers failed.',retryable:true})}
+export async function* streamAI(request:AIRequest,providers:AIProviderConfig[]):AsyncGenerator<AIStreamEvent>{if(!request.messages.length){yield{type:'error',error:new AIError({code:'INVALID_REQUEST',message:'At least one message is required.',retryable:false}).toJSON()};return}const candidates=candidatesFor(request,providers);if(!candidates.length){yield{type:'error',error:new AIError({code:'NO_PROVIDER',message:'No AI model is available for this request.',retryable:false}).toJSON()};return}let lastError:AIError|undefined;for(const {model,provider} of candidates){const maxRetries=Math.max(0,request.maxRetries??provider.maxRetries??2);const adapter=adapterFor(provider);for(let attempt=0;attempt<=maxRetries;attempt++){let startedOutput=false;try{console.info('[ai-router] stream request',{provider:provider.id,model:model.id,attempt:attempt+1});for await(const event of adapter.stream({provider,model,request,apiKey:apiKeyFor(provider)})){if(event.type==='delta')startedOutput=true;if(event.type==='error'&&event.error){lastError=new AIError(event.error);throw lastError}yield event}console.info('[ai-router] stream success',{provider:provider.id,model:model.id,attempt:attempt+1});return}catch(error){lastError=error instanceof AIError?error:new AIError({code:'INTERNAL',message:'AI stream failed.',retryable:false,cause:error,provider:provider.id,model:model.id});console.warn('[ai-router] stream failure',{provider:provider.id,model:model.id,attempt:attempt+1,code:lastError.code,startedOutput});if(lastError.code==='CANCELLED'||startedOutput||!lastError.retryable||attempt>=maxRetries)break;await sleep(retryDelay(attempt),request.signal)}}}yield{type:'error',error:(lastError??new AIError({code:'PROVIDER_UNAVAILABLE',message:'All configured AI providers failed.',retryable:true})).toJSON()}}
 export { calculateCost }

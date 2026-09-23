@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     if(!wantsStream){
       const response=await generateAI({...context.request,stream:false})
       await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:response.content,metadata:{model:response.model,usage:response.usage,cost:response.cost}})
-      await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{user:parsed.data.message,assistant:response.content}},persistence.memoryStore)
+      await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{role:'user',content:parsed.data.message}},persistence.memoryStore)
       await persistence.audit({userId:user.id,projectId:chat.project_id,action:'chat.message',resourceType:'chat',resourceId:chat.id})
       return NextResponse.json({id:response.id,chatId:chat.id,content:response.content.trim(),model:response.model,usage:response.usage,cost:response.cost},{headers:{'Cache-Control':'no-store'}})
     }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
           }
           if(assistant) {
             await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:assistant,metadata:{model:parsed.data.model??null}})
-            await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{user:parsed.data.message,assistant}},persistence.memoryStore)
+            await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{role:'user',content:parsed.data.message}},persistence.memoryStore)
           }
           await persistence.audit({userId:user.id,projectId:chat.project_id,action:'chat.message',resourceType:'chat',resourceId:chat.id})
           controller.close()

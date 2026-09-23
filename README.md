@@ -39,3 +39,10 @@ Os motores internos incluem AI Router, Context, Memory, Skills, Agent, Tool, Per
 Defina as variáveis de `.env.example` na hospedagem. Configure `NEXT_PUBLIC_SITE_URL` com o domínio definitivo. Para analytics, defina `NEXT_PUBLIC_GA_MEASUREMENT_ID`; o script só é carregado após consentimento.
 
 A hospedagem recomendada para o app Next.js é Vercel, com Supabase para Auth/Database/Storage. O domínio personalizado, DNS e certificados são configurações da conta de hospedagem e não podem ser ativados apenas por commits neste repositório.
+
+
+## Políticas
+
+- [Política de Privacidade](docs/privacy-policy.md)
+- [Política de Segurança](docs/security-policy.md)
+- Banco de dados: migrations em `supabase/migrations/`

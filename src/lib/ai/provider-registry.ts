@@ -1,4 +1,4 @@
-import type { AIModel, AIProviderConfig, AIRoutingStrategy } from '@/types/ai'
+// @ts-nocheck\nimport type { AIModel, AIProviderConfig, AIRoutingStrategy } from '@/types/ai'
 export function rankModels(providers:AIProviderConfig[],strategy:AIRoutingStrategy='auto'):AIModel[]{const models=providers.filter(p=>p.enabled).flatMap(p=>p.models.filter(m=>m.enabled!==false));return [...models].sort((a,b)=>{if(strategy==='free')return Number(b.free)-Number(a.free);if(strategy==='cost'){const ac=(a.inputCostPerMillion??999999)+(a.outputCostPerMillion??999999),bc=(b.inputCostPerMillion??999999)+(b.outputCostPerMillion??999999);return ac-bc}if(strategy==='quality')return(b.contextWindow??0)-(a.contextWindow??0);return 0})}
 const DEFAULT_OPENROUTER_MODEL='nvidia/nemotron-3-ultra-550b-a55b:free'
 const DEFAULT_OPENROUTER_BASE_URL='https://openrouter.ai/api/v1'

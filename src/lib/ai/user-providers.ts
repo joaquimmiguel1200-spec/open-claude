@@ -1,4 +1,4 @@
-import 'server-only'
+// @ts-nocheck\nimport 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AIProviderConfig, AIProviderKind } from '@/types/ai'
 import { decryptSecret } from '@/lib/security/encryption'

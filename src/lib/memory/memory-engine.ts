@@ -86,12 +86,12 @@ export function buildMemoryStoreFromSupabase(client: {
 }): MemoryStore {
   return {
     async insertMemory(input) {
-      const { data, error } = await client.from('memory_items').insert(input).select('*').single()
+      const { data, error } = await client.from('memories').insert(input).select('*').single()
       if (error) throw new Error(`Memory insert failed: ${error.message}`)
       return data as MemoryItem
     },
     async findByDedupeKey(input) {
-      let query = client.from('memory_items').select('*').eq('user_id', input.userId).eq('dedupe_key', input.dedupeKey)
+      let query = client.from('memories').select('*').eq('user_id', input.userId).eq('dedupe_key', input.dedupeKey)
       if (input.projectId) query = query.eq('project_id', input.projectId)
       else query = query.is('project_id', null)
       const { data, error } = await query.maybeSingle()

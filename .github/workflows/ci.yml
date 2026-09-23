@@ -22,4 +22,12 @@ jobs:
         with:
           name: typecheck-diagnostics
           path: typecheck.log
-      - name: Build\n        continue-on-error: true\n        run: npm run build 2>&1 | tee build.log\n      - name: Upload build diagnostics\n        if: always()\n        uses: actions/upload-artifact@v4\n        with:\n          name: build-diagnostics\n          path: build.log
+      - name: Build
+        continue-on-error: true
+        run: npm run build 2>&1 | tee build.log
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-diagnostics
+          path: build.log

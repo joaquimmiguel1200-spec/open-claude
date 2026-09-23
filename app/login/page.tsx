@@ -3,7 +3,7 @@
 import { FormEvent, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createSupabaseBrowserClient } from '@/src/lib/supabase/browser'
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 export default function LoginPage(){
   const router=useRouter(); const supabase=createSupabaseBrowserClient(); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [error,setError]=useState(''); const [loading,setLoading]=useState(false)

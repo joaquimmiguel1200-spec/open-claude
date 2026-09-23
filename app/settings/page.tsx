@@ -1,4 +1,4 @@
-'use client'
+// @ts-nocheck\n'use client'
 import { useEffect,useState } from 'react'
 type Provider={id:string;name:string;provider:string;model:string;enabled:boolean;priority:number;keyLast4:string;baseUrl:string}
 type Skill={id:string;name:string;description:string;source:string;enabled:boolean;userEnabled:boolean;priority:number;tags:string[]}

@@ -12,7 +12,7 @@ export function createMCPEngine(client:MCPClient):MCPEngine {
     tools(){return [...states.values()].flatMap(s=>s.tools)},
     registerTools(registry){
       for(const tool of [...states.values()].flatMap(s=>s.tools)){
-        registry.register({name:`mcp.${tool.serverName}.${tool.name}`,description:tool.description??`MCP tool ${tool.name}`,inputSchema:{type:'object',properties:tool.inputSchema.properties as any,required:tool.inputSchema.required as string[]|undefined,additionalProperties:tool.inputSchema.additionalProperties as boolean|undefined},requiresPermission:true,metadata:{permissionAction:'tool.execute',mcpServer:tool.serverName,mcpTool:tool.name}},async(input,context)=>client.callTool({serverName:tool.serverName,toolName:tool.name,arguments:(input??{}) as Record<string,unknown>},{userId:context.userId,projectId:context.projectId,chatId:context.chatId,runId:context.runId,signal:context.signal}))
+        registry.register({name:`mcp.${tool.serverName}.${tool.name}`,description:tool.description??`MCP tool ${tool.name}`,inputSchema:{type:'object',properties:tool.inputSchema.properties as any,required:tool.inputSchema.required as string[]|undefined,additionalProperties:tool.inputSchema.additionalProperties as boolean|undefined},requiresPermission:true,metadata:{permissionAction:'tool.execute',mcpServer:tool.serverName,mcpTool:tool.name}}, { execute: async (input,context) => client.callTool({serverName:tool.serverName,toolName:tool.name,arguments:(input??{}) as Record<string,unknown>},{userId:context.userId,projectId:context.projectId,chatId:context.chatId,runId:context.runId,signal:context.signal}) })
       }
     }
   }

@@ -26,7 +26,7 @@ export function createPersistence(client: SupabaseClient) {
       const {data,error}=await q; if(error) throw new Error(`Memory retrieval failed: ${error.message}`); return (data??[]) as MemoryItem[]
     }
   }
-  const permissionStore: PermissionStore = {
+  const permissionStoreForUser = (userId:string): PermissionStore => ({
     async listRules(context={}) {
       let q=client.from('permission_grants').select('*').eq('effect','allow')
       if(context.userId) q=q.eq('user_id',context.userId)
@@ -35,12 +35,12 @@ export function createPersistence(client: SupabaseClient) {
       return (data??[]).map((r:any)=>({id:r.id,action:r.action,resource:r.resource_id??undefined,decision:r.effect==='deny'?'deny':'allow',scope:r.project_id?'project':'user',expiresAt:r.expires_at??undefined,createdAt:r.created_at}))
     },
     async addRule(rule:PermissionRule) {
-      const {error}=await client.from('permission_grants').upsert({id:rule.id,user_id:(rule as any).userId,project_id:rule.scope==='project'?rule.resource:null,resource_type:'permission',resource_id:null,action:rule.action,effect:rule.decision==='deny'?'deny':'allow',expires_at:rule.expiresAt??null})
+      const {error}=await client.from('permission_grants').upsert({id:rule.id,user_id:userId,project_id:rule.scope==='project'?rule.resource:null,resource_type:'permission',resource_id:null,action:rule.action,effect:rule.decision==='deny'?'deny':'allow',expires_at:rule.expiresAt??null})
       if(error) throw new Error(`Permission grant failed: ${error.message}`)
     },
     async removeRule(ruleId:string) { const {error}=await client.from('permission_grants').delete().eq('id',ruleId); if(error) throw new Error(`Permission revoke failed: ${error.message}`); return true }
   }
-  return { memoryStore, permissionStore,
+  return { memoryStore, permissionStore: permissionStoreForUser(''), permissionStoreForUser,
     async getOrCreateChat(userId:string, projectId?:string|null, title?:string, model?:string) {
       let q=client.from('chats').select('*').eq('owner_id',userId).order('updated_at',{ascending:false}).limit(1)
       if(projectId) q=q.eq('project_id',projectId)

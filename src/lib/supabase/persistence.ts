@@ -28,7 +28,7 @@ export function createPersistence(client: SupabaseClient) {
   }
   const permissionStoreForUser = (userId:string): PermissionStore => ({
     async listRules(context={}) {
-      let q=client.from('permission_grants').select('*').eq('effect','allow')
+      let q=client.from('permission_grants').select('*')
       if(context.userId) q=q.eq('user_id',context.userId)
       if(context.projectId) q=q.or(`project_id.is.null,project_id.eq.${context.projectId}`)
       const {data,error}=await q; if(error) throw new Error(`Permission lookup failed: ${error.message}`)
@@ -39,7 +39,7 @@ export function createPersistence(client: SupabaseClient) {
       if(error) throw new Error(`Permission grant failed: ${error.message}`)
     },
     async removeRule(ruleId:string) { const {error}=await client.from('permission_grants').delete().eq('id',ruleId); if(error) throw new Error(`Permission revoke failed: ${error.message}`); return true }
-  }
+  })
   return { memoryStore, permissionStore: permissionStoreForUser(''), permissionStoreForUser,
     async getOrCreateChat(userId:string, projectId?:string|null, title?:string, model?:string) {
       let q=client.from('chats').select('*').eq('owner_id',userId).order('updated_at',{ascending:false}).limit(1)

@@ -19,7 +19,7 @@ export function buildContextRequest(input: ContextSources, request: Omit<AIReque
   const explicitMessages = request.messages ?? []
   const queryText = [...recentMessages, ...explicitMessages].slice(-3).map((message) => message.content).join(' ')
   const memories = rankMemories(input.memories ?? [], { text: queryText, limit: config.maxMemories })
-  const summaries = (input.summaries ?? []).slice(-config.maxSummaries)
+  const summaries = (input.summaries ?? []).slice(-(config.maxSummaries ?? DEFAULT_OPTIONS.maxSummaries))
   const ragResults = (input.ragResults ?? []).slice(0, config.maxRagResults)
   const memoryTexts = memories.map((item) => memoryText(item.content, item.category))
   const summaryTexts = summaries.map((item) => summaryText(item.summary))

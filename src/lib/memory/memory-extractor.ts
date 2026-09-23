@@ -44,21 +44,19 @@ function dedupeKey(content: string): string {
 export function extractMemoryCandidates(turn: MemoryTurn, options: { projectId?: string | null; chatId?: string | null } = {}): MemoryCandidate[] {
   if (turn.role !== 'user') return []
 
-  return splitCandidates(turn.content)
-    .map((content) => {
-      const classification = classify(content)
-      if (!classification) return null
-      const explicit = /\b(?:lembre-se|lembra que|memorize|guarde|anote|salve|remember)\b/i.test(content)
-      return {
-        content,
-        category: classification.category,
-        importance: explicit ? Math.max(classification.importance, 92) : classification.importance,
-        source: 'user' as MemorySource,
-        projectId: options.projectId ?? null,
-        chatId: options.chatId ?? null,
-        dedupeKey: dedupeKey(content),
-        metadata: { extraction: 'rule-based', explicit },
-      }
-    })
-    .filter((candidate): candidate is MemoryCandidate => candidate !== null)
+  return splitCandidates(turn.content).flatMap((content): MemoryCandidate[] => {
+    const classification = classify(content)
+    if (!classification) return []
+    const explicit = /\b(?:lembre-se|lembra que|memorize|guarde|anote|salve|remember)\b/i.test(content)
+    return [{
+      content,
+      category: classification.category,
+      importance: explicit ? Math.max(classification.importance, 92) : classification.importance,
+      source: 'user' as MemorySource,
+      projectId: options.projectId ?? null,
+      chatId: options.chatId ?? null,
+      dedupeKey: dedupeKey(content),
+      metadata: { extraction: 'rule-based', explicit },
+    }]
+  })
 }

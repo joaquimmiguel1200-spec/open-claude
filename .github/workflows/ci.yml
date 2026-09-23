@@ -13,21 +13,5 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
-      - name: Typecheck
-        continue-on-error: true
-        run: npm run typecheck 2>&1 | tee typecheck.log
-      - name: Upload typecheck diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: typecheck-diagnostics
-          path: typecheck.log
-      - name: Build
-        continue-on-error: true
-        run: npm run build 2>&1 | tee build.log
-      - name: Upload build diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-diagnostics
-          path: build.log
+      - run: npm run typecheck
+      - run: npm run build

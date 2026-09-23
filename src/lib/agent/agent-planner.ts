@@ -12,6 +12,6 @@ export function createInitialPlan(goal: string, maxSteps = 6): AgentPlan {
     { id: 'step-3', index: 3, title: 'Execute reasoning', objective: 'Produce the best solution using the selected context and capabilities.', status: 'pending' },
     { id: 'step-4', index: 4, title: 'Validate result', objective: 'Check completeness, constraints, safety, and consistency.', status: 'pending' },
     { id: 'step-5', index: 5, title: 'Deliver result', objective: 'Return a concise result that directly addresses the request.', status: 'pending' },
-  ].slice(0, Math.max(1, Math.min(maxSteps, 5)))
+  ].slice(0, Math.max(1, Math.min(maxSteps, 5))) as AgentStep[]
   return { goal: normalized, steps }
 }

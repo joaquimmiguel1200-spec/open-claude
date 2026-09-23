@@ -99,12 +99,12 @@ export function buildMemoryStoreFromSupabase(client: {
       return (data as MemoryItem | null) ?? null
     },
     async updateMemory(id, patch) {
-      const { data, error } = await client.from('memory_items').update(patch).eq('id', id).select('*').single()
+      const { data, error } = await client.from('memories').update(patch).eq('id', id).select('*').single()
       if (error) throw new Error(`Memory update failed: ${error.message}`)
       return data as MemoryItem
     },
     async listMemories(input) {
-      let query = client.from('memory_items').select('*').eq('user_id', input.userId).order('importance', { ascending: false }).limit(input.limit ?? 50)
+      let query = client.from('memories').select('*').eq('user_id', input.userId).order('importance', { ascending: false }).limit(input.limit ?? 50)
       if (input.projectId) query = query.or(`project_id.is.null,project_id.eq.${input.projectId}`)
       if (input.chatId) query = query.or(`chat_id.is.null,chat_id.eq.${input.chatId}`)
       const { data, error } = await query

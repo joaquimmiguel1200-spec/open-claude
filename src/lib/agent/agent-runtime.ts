@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { AIMessage } from '@/types/ai'
+import type { AIMessage, AIProviderConfig } from '@/types/ai'
 import type { AgentEvent, AgentRunInput, AgentRunResult } from '@/types/agent'
 import { generateAI } from '@/lib/ai'
 import { createInitialPlan } from './agent-planner'
@@ -15,7 +15,7 @@ function emit(events: AgentEvent[], event: AgentEvent, onEvent?: (event: AgentEv
   onEvent?.(event)
 }
 
-export function createAgentRuntime(deps: { skillEngine?: AgentSkillSelector } = {}) {
+export function createAgentRuntime(deps: { skillEngine?: AgentSkillSelector; providers?: AIProviderConfig[] } = {}) {
   return {
     async run(input: AgentRunInput, onEvent?: (event: AgentEvent) => void): Promise<AgentRunResult> {
       const runId = randomUUID()
@@ -49,7 +49,10 @@ export function createAgentRuntime(deps: { skillEngine?: AgentSkillSelector } = 
       ]
 
       try {
-        const response = await generateAI({ messages, model: input.model, strategy: input.strategy, signal: input.signal, metadata: { agentRunId: runId, activeSkills: activeSkills.map((skill) => skill.name) } })
+        const response = await generateAI(
+          { messages, model: input.model, strategy: input.strategy, signal: input.signal, metadata: { agentRunId: runId, activeSkills: activeSkills.map((skill) => skill.name) } },
+          deps.providers ?? [],
+        )
         plan.steps.forEach((step) => { if (step.status === 'running') step.status = 'completed' })
         plan.steps.forEach((step) => emit(events, { type: 'step.completed', runId, stepId: step.id, timestamp: now(), message: step.title }, onEvent))
         emit(events, { type: 'model.completed', runId, timestamp: now(), data: { model: response.model, provider: response.provider, usage: response.usage } }, onEvent)

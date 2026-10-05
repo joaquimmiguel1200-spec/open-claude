@@ -5,6 +5,8 @@ export const chatInputSchema = z.object({
   chatId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
   model: z.string().trim().max(120).optional(),
+  mode: z.enum(['chat', 'code', 'cowork']).optional().default('chat'),
+  customInstructions: z.string().trim().max(4000).optional(),
   stream: z.boolean().optional().default(false),
   honeypot: z.string().max(200).optional().default(''),
 }).strict()

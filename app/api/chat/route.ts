@@ -10,13 +10,16 @@ import { createPersistence } from '@/lib/supabase/persistence'
 import { retrieveMemories, captureMemories } from '@/lib/memory/memory-engine'
 import { buildContextRequest } from '@/lib/context/context-engine'
 import { matchSkills } from '@/lib/skills/skill-loader'
+import { createAgentRuntime } from '@/lib/agent/agent-runtime'
+import { createAgentTaskRunner } from '@/lib/cowork/agent-task-runner'
+import { createCoworkRuntime } from '@/lib/cowork/cowork-runtime'
 
 export const runtime='nodejs'
 const routingStrategies:AIRoutingStrategy[]=['auto','quality','cost','latency','free']
 const modeInstructions={
  chat:'MODE: CHAT. Be conversational, clear and useful. Help with research, writing, analysis and everyday tasks.',
- code:'MODE: CODE. Prioritize correct, runnable code. Explain changes briefly, preserve existing architecture, and think like a careful software engineer. When appropriate, propose files, tests and implementation steps.',
- cowork:'MODE: COWORK. Act like an execution-oriented project partner. Break complex work into concrete steps, identify files/tools needed, surface risks, and produce a clear deliverable or next action. Never claim an external action was performed unless a connected tool actually performed it.',
+ code:'MODE: CODE. Work like a careful coding agent. Analyze implementation details, reason about architecture, propose concrete changes, tests and debugging steps. Do not claim that files were changed or commands were executed unless a connected execution tool actually performed that action.',
+ cowork:'MODE: COWORK. Work like an execution-oriented project partner. Break complex work into concrete dependent tasks, execute them through the agent runtime, and return the deliverables. Never claim an external action was performed unless a connected tool actually performed it.',
 } as const
 function configuredStrategy():AIRoutingStrategy{const value=process.env.AI_ROUTING_STRATEGY?.trim() as AIRoutingStrategy|undefined;return value&&routingStrategies.includes(value)?value:'free'}
 
@@ -28,6 +31,12 @@ async function activeSkillInstructions(supabase:any,userId:string,query:string){
   const active=skills.filter((s:any)=>!disabled.has(s.id))
   const matches=matchSkills(active.map((s:any)=>({...s,source:s.owner_id?'user':'builtin'})),query,5)
   return matches.map(x=>`SKILL: ${x.skill.name}\nDESCRIPTION: ${x.skill.description}\nINSTRUCTIONS:\n${x.skill.instructions}`)
+}
+
+function sseResponse(events:unknown[]){
+  const encoder=new TextEncoder()
+  const body=new ReadableStream<Uint8Array>({start(controller){for(const event of events)controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));controller.close()}})
+  return new Response(body,{headers:{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-store, must-revalidate',Connection:'keep-alive','X-Accel-Buffering':'no-store'}})
 }
 
 export async function POST(request:Request){
@@ -51,16 +60,38 @@ export async function POST(request:Request){
   const context=buildContextRequest({recentMessages:recent as any,memories,ragResults,systemInstructions},{messages:[{role:'user',content:parsed.data.message}],model:parsed.data.model,strategy:configuredStrategy(),stream:true,signal:request.signal,metadata:{userId:user.id,chatId:chat.id,projectId:chat.project_id,mode:parsed.data.mode??'chat'}})
   await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'user',content:parsed.data.message,metadata:{projectId:chat.project_id,mode:parsed.data.mode??'chat'}})
   const providers=await userAIProviders(supabase,user.id)
+  const mode=parsed.data.mode??'chat'
+
+  if(mode==='code'||mode==='cowork'){
+    const agent=createAgentRuntime({providers})
+    let assistant=''
+    const events:any[]=[]
+    if(mode==='code'){
+      const result=await agent.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:`${parsed.data.message}\n\n${systemInstructions.join('\n')}`,messages:recent as any,model:parsed.data.model,strategy:configuredStrategy(),maxSteps:6,signal:request.signal},event=>events.push(event))
+      assistant=result.response?.content??result.error??'O modo Code não produziu uma resposta.'
+      events.push({type:'mode.completed',mode,runId:result.runId,model:result.response?.model,provider:result.response?.provider})
+    }else{
+      const cowork=createCoworkRuntime({taskRunner:createAgentTaskRunner(agent),maxConcurrency:3})
+      const result=await cowork.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:parsed.data.message,model:parsed.data.model,strategy:configuredStrategy(),maxTasks:5,concurrency:3,signal:request.signal},event=>events.push(event))
+      assistant=result.plan.tasks.map((task:any)=>`## ${task.title}\n${typeof task.result==='string'?task.result:JSON.stringify(task.result)}`).join('\n\n')||result.error||'O modo Cowork não produziu um resultado.'
+      events.push({type:'mode.completed',mode,runId:result.runId,status:result.status})
+    }
+    await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:assistant,metadata:{mode,model:parsed.data.model??null,agentMode:true}})
+    await persistence.audit({userId:user.id,projectId:chat.project_id,action:`${mode}.run`,resourceType:'chat',resourceId:chat.id,metadata:{mode}})
+    if(parsed.data.stream===true||request.headers.get('accept')?.includes('text/event-stream'))return sseResponse([{type:'start',mode},{type:'delta',delta:assistant},{type:'done',mode,events}])
+    return NextResponse.json({id:crypto.randomUUID(),chatId:chat.id,content:assistant,mode,events},{headers:{'Cache-Control':'no-store'}})
+  }
+
   const wantsStream=request.headers.get('accept')?.includes('text/event-stream')||parsed.data.stream===true
   if(!wantsStream){
    const response=await generateAI({...context.request,stream:false},providers)
-   await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:response.content,metadata:{model:response.model,usage:response.usage,cost:response.cost,mode:parsed.data.mode??'chat'}})
+   await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:response.content,metadata:{model:response.model,usage:response.usage,cost:response.cost,mode}})
    await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{role:'user',content:parsed.data.message}},persistence.memoryStore)
-   await persistence.audit({userId:user.id,projectId:chat.project_id,action:'chat.message',resourceType:'chat',resourceId:chat.id,metadata:{mode:parsed.data.mode??'chat'}})
+   await persistence.audit({userId:user.id,projectId:chat.project_id,action:'chat.message',resourceType:'chat',resourceId:chat.id,metadata:{mode}})
    return NextResponse.json({id:response.id,chatId:chat.id,content:response.content.trim(),model:response.model,usage:response.usage,cost:response.cost},{headers:{'Cache-Control':'no-store'}})
   }
   const encoder=new TextEncoder();let assistant=''
-  const stream=new ReadableStream<Uint8Array>({async start(controller){try{for await(const event of streamAIResponse(context.request,providers)){if(event.type==='delta')assistant+=event.delta??'';controller.enqueue(encoder.encode(`data: ${JSON.stringify({...event,chatId:chat.id})}\n\n`))}if(assistant)await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:assistant,metadata:{model:parsed.data.model??null,mode:parsed.data.mode??'chat'}});if(assistant)await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{role:'user',content:parsed.data.message}},persistence.memoryStore);await persistence.audit({userId:user.id,projectId:chat.project_id,action:'chat.message',resourceType:'chat',resourceId:chat.id,metadata:{mode:parsed.data.mode??'chat'}});controller.close()}catch(error){const message=error instanceof Error?error.message:'AI stream failed.';controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:'error',error:{code:'INTERNAL',message,retryable:false}})}\n\n`));controller.close()}}})
+  const stream=new ReadableStream<Uint8Array>({async start(controller){try{for await(const event of streamAIResponse(context.request,providers)){if(event.type==='delta')assistant+=event.delta??'';controller.enqueue(encoder.encode(`data: ${JSON.stringify({...event,chatId:chat.id})}\n\n`))}if(assistant)await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:assistant,metadata:{model:parsed.data.model??null,mode}});if(assistant)await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{role:'user',content:parsed.data.message}},persistence.memoryStore);await persistence.audit({userId:user.id,projectId:chat.project_id,action:'chat.message',resourceType:'chat',resourceId:chat.id,metadata:{mode}});controller.close()}catch(error){const message=error instanceof Error?error.message:'AI stream failed.';controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:'error',error:{code:'INTERNAL',message,retryable:false}})}\n\n`));controller.close()}}})
   return new Response(stream,{headers:{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-store, must-revalidate',Connection:'keep-alive','X-Accel-Buffering':'no-store'}})
  }catch(error){
   const message=error instanceof Error?error.message:'Não foi possível processar a solicitação.'

@@ -1,0 +1,69 @@
+import { NextResponse } from 'next/server'
+import { requireUser } from '@/lib/supabase/server'
+import { userAIProviders } from '@/lib/ai/user-providers'
+import { generateAI } from '@/lib/ai'
+import { createGitHubClientFromEnv } from '@/lib/github/github-client'
+import { createCodeAgent } from '@/lib/code-agent/code-agent'
+
+export const runtime = 'nodejs'
+
+function extractJson(content: string): any {
+  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+  const raw = (fenced?.[1] ?? content).trim()
+  return JSON.parse(raw)
+}
+
+export async function POST(request: Request) {
+  try {
+    const { user, supabase } = await requireUser()
+    const body = await request.json() as any
+    const goal = String(body?.goal ?? '').trim()
+    const repository = String(body?.repository ?? process.env.GITHUB_REPOSITORY ?? '').trim()
+    const branch = String(body?.branch ?? process.env.GITHUB_DEFAULT_BRANCH ?? 'main').trim()
+    const paths = Array.isArray(body?.paths) ? body.paths.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, 20) : []
+    const apply = body?.apply === true
+    if (!goal || goal.length > 12000) return NextResponse.json({ error: 'O objetivo Code é obrigatório.' }, { status: 400 })
+    if (!/^[^/\s]+\/[^/\s]+$/.test(repository)) return NextResponse.json({ error: 'Informe repository no formato owner/repository.' }, { status: 400 })
+    if (!paths.length) return NextResponse.json({ error: 'Informe pelo menos um caminho de arquivo para o Code Agent analisar.' }, { status: 400 })
+
+    const [owner, repo] = repository.split('/')
+    const github = createGitHubClientFromEnv()
+    const snapshots = [] as Array<{ path: string; sha: string; content: string }>
+    for (const path of paths) {
+      const file = await github.getFile(owner, repo, path, branch, request.signal)
+      snapshots.push({ path: file.path, sha: file.sha, content: file.content })
+    }
+
+    const providers = await userAIProviders(supabase, user.id)
+    const response = await generateAI({
+      model: typeof body?.model === 'string' ? body.model.trim() : undefined,
+      strategy: 'free',
+      signal: request.signal,
+      maxTokens: 24000,
+      messages: [
+        { role: 'system', content: 'You are Open Claude Code. Return ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"content":string}]}. Preserve project architecture. Only edit files supplied in CONTEXT. Do not invent files. Produce complete file contents, not patches.' },
+        { role: 'user', content: `GOAL:\n${goal}\n\nREPOSITORY:\n${repository}\nBRANCH:\n${branch}\n\nCONTEXT:\n${snapshots.map((file) => `FILE: ${file.path}\nSHA: ${file.sha}\nCONTENT:\n${file.content}`).join('\n\n')}` },
+      ],
+      metadata: { mode: 'code', userId: user.id, repository, branch },
+    }, providers)
+
+    const plan = extractJson(response.content)
+    if (!plan || !Array.isArray(plan.edits) || !plan.edits.length) return NextResponse.json({ error: 'O modelo não produziu alterações válidas.', raw: response.content }, { status: 422 })
+
+    const allowed = new Map(snapshots.map((file) => [file.path, file.sha]))
+    const edits = plan.edits.map((edit: any) => {
+      const path = String(edit?.path ?? '').trim()
+      if (!allowed.has(path)) throw new Error(`O modelo tentou alterar um caminho não autorizado: ${path}`)
+      return { path, kind: 'update' as const, content: String(edit?.content ?? ''), expectedSha: allowed.get(path) }
+    })
+
+    if (!apply) return NextResponse.json({ mode: 'code', applied: false, repository, branch, summary: String(plan.summary ?? ''), commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), edits, model: response.model, provider: response.provider }, { headers: { 'Cache-Control': 'no-store' } })
+
+    const agent = createCodeAgent(github)
+    const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes') })
+    return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Não foi possível executar o Code Agent.'
+    return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })
+  }
+}

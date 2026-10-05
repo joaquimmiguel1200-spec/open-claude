@@ -4,7 +4,7 @@ export type CoworkEventType = 'run.created' | 'run.started' | 'task.created' | '
 export interface CoworkTask { id:string; title:string; objective:string; status:CoworkTaskStatus; dependsOn:string[]; result?:unknown; error?:string }
 export interface CoworkPlan { goal:string; tasks:CoworkTask[] }
 export interface CoworkEvent { type:CoworkEventType; runId:string; timestamp:string; taskId?:string; message?:string; data?:Record<string,unknown> }
-export interface CoworkRunInput { userId?:string; projectId?:string|null; chatId?:string|null; goal:string; maxTasks?:number; concurrency?:number; signal?:AbortSignal }
+export interface CoworkRunInput { userId?:string; projectId?:string|null; chatId?:string|null; goal:string; model?:string; strategy?:import('@/types/ai').AIRoutingStrategy; maxTasks?:number; concurrency?:number; signal?:AbortSignal }
 export interface CoworkRunResult { runId:string; status:CoworkRunStatus; plan:CoworkPlan; events:CoworkEvent[]; error?:string }
 export interface CoworkCheckpoint { runId:string; timestamp:string; status:CoworkRunStatus; plan:CoworkPlan }
 export interface CoworkTaskRunner { run(task:CoworkTask, input:CoworkRunInput, signal?:AbortSignal):Promise<unknown> }

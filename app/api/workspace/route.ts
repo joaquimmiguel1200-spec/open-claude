@@ -1,5 +1,3 @@
-'use server'
-
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/supabase/server'
 
@@ -51,7 +49,8 @@ export async function POST(request: Request) {
 
     if (action === 'preferences') {
       const preferences = body?.preferences && typeof body.preferences === 'object' ? body.preferences : {}
-      const { data, error } = await supabase.from('profiles').upsert({ id: user.id, preferences, updated_at: new Date().toISOString() }).select('display_name,avatar_url,preferences').single()
+      const displayName = typeof body?.displayName === 'string' ? body.displayName.trim().slice(0, 120) : undefined
+      const { data, error } = await supabase.from('profiles').upsert({ id: user.id, ...(displayName ? { display_name: displayName } : {}), preferences, updated_at: new Date().toISOString() }).select('display_name,avatar_url,preferences').single()
       if (error) throw new Error(error.message)
       return NextResponse.json({ profile: data })
     }

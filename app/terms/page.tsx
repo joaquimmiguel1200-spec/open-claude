@@ -1,0 +1,3 @@
+import Link from 'next/link'
+export const metadata={title:'Termos de Uso'}
+export default function Terms(){return <main className="shell"><article className="chat card legal"><p className="kicker">OPEN CLAUDE · LEGAL</p><h1>Termos de Uso</h1><p>Regras de uso da plataforma, contas, IA, Code, Cowork, integrações, propriedade intelectual, disponibilidade, cobrança e encerramento.</p><p><Link href="/privacy">Privacidade</Link> · <Link href="/security">Segurança</Link></p><p><a href="/docs/terms-of-use.md">Documento completo no projeto</a></p></article></main>}

@@ -38,25 +38,31 @@ Integrações operam com o menor escopo possível. Operações destrutivas devem
 ## 12. Logs e auditoria
 Eventos de autenticação, permissões, integrações, Code, Cowork e ações administrativas podem ser auditados. Logs não devem conter tokens, senhas ou dados pessoais desnecessários e devem possuir acesso restrito e proteção contra alteração indevida.
 
-## 13. Dependências e desenvolvimento
+## 13. Sessões, cookies e navegador
+Cookies de autenticação devem usar Secure, HttpOnly e SameSite apropriados quando gerenciados pelo serviço. Sessões devem possuir expiração, revogação e proteção contra reutilização indevida conforme o mecanismo de autenticação. CORS deve permitir apenas origens necessárias.
+
+## 14. Headers e browser security
+O middleware aplica HTTPS em produção, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP e CORP. Content Security Policy deve ser adicionada após mapear scripts, fontes e integrações legítimas para evitar quebrar o aplicativo.
+
+## 15. Dependências e desenvolvimento
 Dependências devem ser mantidas atualizadas, lockfiles versionados e auditorias executadas. Mudanças passam por typecheck, build, testes e revisão de segurança. CI/CD deve usar secrets protegidos, branches protegidas e versões fixadas quando possível.
 
-## 14. Backups e continuidade
+## 16. Backups e continuidade
 Backups devem ter acesso mínimo, retenção definida e testes de restauração. Recuperação deve validar integridade antes de reabrir o serviço. RPO/RTO devem ser definidos conforme a criticidade comercial.
 
-## 15. Vulnerabilidades
+## 17. Vulnerabilidades
 Vulnerabilidades devem ser identificadas, classificadas por risco, reproduzidas de forma segura, corrigidas, testadas e acompanhadas. O canal oficial é definido pela Política de Vulnerabilidades.
 
-## 16. Incidentes
+## 18. Incidentes
 O processo é detecção → contenção → investigação → erradicação → recuperação → validação → comunicação → pós-incidente. Segredos comprometidos devem ser revogados/rotacionados. Incidentes envolvendo dados pessoais serão avaliados para comunicação conforme a legislação aplicável.
 
-## 17. Disponibilidade e monitoramento
+## 19. Disponibilidade e monitoramento
 Deployments devem ser considerados concluídos apenas quando READY. Logs de erro, disponibilidade, falhas de provider e degradações devem ser monitorados quando a infraestrutura oferecer os recursos.
 
-## 18. Comunicação
+## 20. Comunicação
 Vulnerabilidades e incidentes devem ser comunicados pelo canal oficial apropriado. Informações técnicas sensíveis não devem ser divulgadas publicamente antes de mitigação quando isso aumentar o risco.
 
-## 19. Limitações
+## 21. Limitações
 Nenhuma aplicação conectada à internet oferece segurança absoluta. A segurança também depende do dispositivo, senha, MFA, tokens, repositórios e integrações controlados pelo usuário.
 
 > Esta política descreve controles técnicos e operacionais previstos no projeto e deve ser revisada periodicamente conforme a infraestrutura real e antes de uma oferta comercial regulada.

@@ -45,7 +45,7 @@ export default function HomePage() {
         {features.map(([title, description]) => <article className="feature" key={title}><span className="feature-index">0{features.findIndex(x => x[0] === title) + 1}</span><h3>{title}</h3><p>{description}</p></article>)}
       </section>
 
-      <footer className="footer">Open Claude · Segurança, privacidade e controle por padrão. · <Link href="/privacy">Privacidade</Link></footer>
+      <footer className="footer">Open Claude · Segurança, privacidade e controle por padrão. · <Link href="/privacy">Privacidade</Link> · <Link href="/terms">Termos</Link> · <Link href="/security">Segurança</Link> · <Link href="/cookies">Cookies</Link> · <Link href="/refunds">Reembolso</Link> · <Link href="/ai-policy">IA</Link></footer>
     </main>
   )
 }

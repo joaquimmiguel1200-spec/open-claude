@@ -4,6 +4,8 @@ import { userAIProviders } from '@/lib/ai/user-providers'
 import { generateAI } from '@/lib/ai'
 import { createGitHubClientFromEnv } from '@/lib/github/github-client'
 import { createCodeAgent } from '@/lib/code-agent/code-agent'
+import type { AIRoutingStrategy } from '@/types/ai'
+import { clientKey, rateLimit } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -16,12 +18,16 @@ function extractJson(content: string): any {
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await requireUser()
+    const limit = rateLimit(clientKey(request, user.id), 10, 60000)
+    if (!limit.allowed) return NextResponse.json({ error: 'Muitas solicitações Code. Tente novamente em instantes.' }, { status: 429, headers: { 'Retry-After': String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } })
     const body = await request.json() as any
     const goal = String(body?.goal ?? '').trim()
     const repository = String(body?.repository ?? process.env.GITHUB_REPOSITORY ?? '').trim()
     const branch = String(body?.branch ?? process.env.GITHUB_DEFAULT_BRANCH ?? 'main').trim()
     const paths = Array.isArray(body?.paths) ? body.paths.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, 20) : []
     const apply = body?.apply === true
+    const strategies: AIRoutingStrategy[] = ['auto','quality','cost','latency','free']
+    const strategy = strategies.includes(body?.strategy) ? body.strategy : 'free'
     if (!goal || goal.length > 12000) return NextResponse.json({ error: 'O objetivo Code é obrigatório.' }, { status: 400 })
     if (!/^[^/\s]+\/[^/\s]+$/.test(repository)) return NextResponse.json({ error: 'Informe repository no formato owner/repository.' }, { status: 400 })
     if (!paths.length) return NextResponse.json({ error: 'Informe pelo menos um caminho de arquivo para o Code Agent analisar.' }, { status: 400 })
@@ -37,14 +43,14 @@ export async function POST(request: Request) {
     const providers = await userAIProviders(supabase, user.id)
     const response = await generateAI({
       model: typeof body?.model === 'string' ? body.model.trim() : undefined,
-      strategy: 'free',
+      strategy,
       signal: request.signal,
       maxTokens: 24000,
       messages: [
         { role: 'system', content: 'You are Open Claude Code. Return ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"content":string}]}. Preserve project architecture. Only edit files supplied in CONTEXT. Do not invent files. Produce complete file contents, not patches.' },
         { role: 'user', content: `GOAL:\n${goal}\n\nREPOSITORY:\n${repository}\nBRANCH:\n${branch}\n\nCONTEXT:\n${snapshots.map((file) => `FILE: ${file.path}\nSHA: ${file.sha}\nCONTENT:\n${file.content}`).join('\n\n')}` },
       ],
-      metadata: { mode: 'code', userId: user.id, repository, branch },
+      metadata: { mode: 'code', userId: user.id, repository, branch, strategy },
     }, providers)
 
     const plan = extractJson(response.content)

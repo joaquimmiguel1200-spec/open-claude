@@ -1,0 +1,13 @@
+'use client'
+import {useEffect,useState} from 'react'
+import Link from 'next/link'
+import {createSupabaseBrowserClient} from '@/lib/supabase/browser'
+export default function SecurityPage(){
+ const [factor,setFactor]=useState<any>(null),[qr,setQr]=useState(''),[secret,setSecret]=useState(''),[code,setCode]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false)
+ async function load(){const s=createSupabaseBrowserClient();const {data}=await s.auth.mfa.listFactors();setFactor((data?.all??[]).find((x:any)=>x.status==='verified')??null)}
+ useEffect(()=>{load()},[])
+ async function enroll(){setError('');setBusy(true);const s=createSupabaseBrowserClient();const {data,error}=await s.auth.mfa.enroll({factorType:'totp',friendlyName:'Open Claude Authenticator'});if(error)setError(error.message);else{setFactor({id:data.id,status:'unverified'});setQr(data.totp.qr_code);setSecret(data.totp.secret)}setBusy(false)}
+ async function verify(){setError('');setBusy(true);const s=createSupabaseBrowserClient();const c=await s.auth.mfa.challenge({factorId:factor.id});if(c.error){setError(c.error.message);setBusy(false);return}const v=await s.auth.mfa.verify({factorId:factor.id,challengeId:c.data.id,code});if(v.error)setError(v.error.message);else{setQr('');setSecret('');setCode('');await load()}setBusy(false)}
+ async function remove(){if(!factor)return;setBusy(true);const s=createSupabaseBrowserClient();const r=await s.auth.mfa.unenroll({factorId:factor.id});if(r.error)setError(r.error.message);else setFactor(null);setBusy(false)}
+ return <main className="shell"><nav className="nav"><Link className="brand" href="/chat">OPEN CLAUDE</Link><Link className="muted" href="/account">Privacidade</Link></nav><section className="chat"><div className="card"><h1>Segurança da conta</h1>{factor?.status==='verified'?<><p>✅ MFA/TOTP está ativo.</p><button className="button secondary" onClick={remove} disabled={busy}>Remover autenticador</button></>:!qr?<><p className="muted">Ative MFA com um aplicativo autenticador (TOTP).</p><button className="button" onClick={enroll} disabled={busy}>Ativar MFA</button></>:<><p>Escaneie o QR Code com seu autenticador e confirme o código.</p><img alt="QR Code para configurar MFA" src={'data:image/svg+xml;utf8,'+encodeURIComponent(qr)} style={{maxWidth:260}}/><p className="muted">Chave manual: {secret}</p><input inputMode="numeric" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))}/><button className="button" onClick={verify} disabled={busy||code.length!==6}>Confirmar MFA</button></>}{error&&<p role="alert">{error}</p>}</div></section></main>
+}

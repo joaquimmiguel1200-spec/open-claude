@@ -1,32 +1,20 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './src/lib/supabase/config'
 
+/**
+ * Keep middleware edge-fast. Authentication is enforced by server/API handlers
+ * with requireUser(). Middleware must never wait on Supabase/network I/O because
+ * a stalled auth request can make the entire page hit Vercel's initial-response timeout.
+ */
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request })
   const isProduction = process.env.NODE_ENV === 'production'
   const proto = request.headers.get('x-forwarded-proto')
+
   if (isProduction && proto && proto !== 'https') {
     const url = request.nextUrl.clone()
     url.protocol = 'https:'
     return NextResponse.redirect(url)
   }
-
-  const supabase = createServerClient(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, { ...options, sameSite: 'lax', secure: isProduction })),
-      },
-    },
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-  const pathname = request.nextUrl.pathname
-  const protectedRoute = pathname.startsWith('/chat') || pathname.startsWith('/projects') || pathname.startsWith('/files') || pathname.startsWith('/settings')
-  if (protectedRoute && !user) return NextResponse.redirect(new URL('/login', request.url))
 
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-Frame-Options', 'DENY')
@@ -38,4 +26,6 @@ export async function middleware(request: NextRequest) {
   return response
 }
 
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)'] }
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)'],
+}

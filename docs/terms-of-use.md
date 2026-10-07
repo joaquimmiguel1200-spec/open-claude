@@ -53,7 +53,10 @@ Os Termos podem ser atualizados para refletir mudanças legais, técnicas ou de 
 ## 17. Lei e foro
 Aplica-se a legislação brasileira, sem prejuízo dos direitos inderrogáveis do consumidor. O foro será definido conforme as regras legais aplicáveis à relação e ao domicílio do consumidor quando obrigatório.
 
-## 18. Disposições finais
+## 18. Histórico e versão
+Esta versão deve ser identificada por data e número de versão no aplicativo. Alterações materiais devem ser comunicadas por meio adequado.
+
+## 19. Disposições finais
 Se uma disposição for inválida, as demais permanecem válidas. Estes Termos devem ser lidos junto com as políticas vinculadas no aplicativo.
 
 > Este documento é uma base operacional e deve ser revisado por advogado antes de uso comercial definitivo, especialmente para preencher a identificação jurídica, CNPJ/endereço, atendimento e regras de cobrança.

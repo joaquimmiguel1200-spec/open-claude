@@ -1,0 +1,2 @@
+export const metadata={title:'Cookies'}
+export default function Cookies(){return <main className="shell"><article className="chat card legal"><p className="kicker">OPEN CLAUDE · LEGAL</p><h1>Política de Cookies</h1><p>Cookies necessários sustentam autenticação e segurança. Preferências e analytics seguem as escolhas de consentimento disponíveis.</p><p><a href="/docs/cookie-policy.md">Documento completo no projeto</a></p></article></main>

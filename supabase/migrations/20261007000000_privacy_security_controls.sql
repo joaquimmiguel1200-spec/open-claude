@@ -41,3 +41,9 @@ begin
 end;
 $$;
 revoke all on function public.purge_expired_audit_logs() from public;
+
+-- Remove legacy permissive ALL policies that overlapped granular ownership policies.
+drop policy if exists chats_access on public.chats;
+drop policy if exists files_access on public.files;
+drop policy if exists projects_access on public.projects;
+drop policy if exists messages_access on public.messages;

@@ -1,43 +1,47 @@
 # Política de Privacidade — Open Claude
 
-Última atualização: setembro de 2026
+Última atualização: outubro de 2026
 
-O Open Claude é uma plataforma de inteligência artificial para conversas com modelos de IA, projetos, arquivos, ferramentas, integrações autorizadas e tarefas assistidas.
+## 1. Controlador e contato
+O responsável jurídico, endereço, CNPJ e canal formal de privacidade devem ser preenchidos antes da oferta comercial definitiva. O aplicativo deve exibir um canal específico para solicitações de titulares.
 
-## 1. Dados coletados
-Podem ser processados dados de cadastro/autenticação, e-mail, identificadores, mensagens, arquivos, projetos, configurações, integrações autorizadas e registros técnicos e de segurança. Dados pessoais desnecessários não devem ser solicitados.
+## 2. Dados tratados
+Podem ser tratados dados de cadastro/autenticação, identificadores, e-mail, mensagens, arquivos, projetos, memória, configurações, integrações autorizadas, uso da plataforma e registros técnicos/de segurança. Dados técnicos podem incluir IP, navegador, dispositivo, horários, erros e identificadores de sessão. Dados desnecessários não devem ser coletados.
 
-## 2. Conteúdo do usuário
-Mensagens, arquivos, projetos e demais conteúdos são processados para executar as funcionalidades solicitadas, incluindo respostas, tarefas, pesquisa em projetos autorizados, arquivos, ferramentas, contexto e memória.
+## 3. Finalidades
+Os dados são utilizados para autenticar, prestar e proteger o serviço, salvar projetos e conversas, executar ferramentas autorizadas, personalizar contexto quando memória estiver habilitada, prevenir abuso, atender solicitações, cumprir obrigações legais e melhorar confiabilidade quando houver base legal adequada.
 
-## 3. Inteligência artificial
-Solicitações podem ser encaminhadas a provedores de IA configurados. O conteúdo enviado deve ser limitado ao necessário para a solicitação, conforme contexto, memória, ferramentas e permissões.
+## 4. Bases legais
+As bases legais aplicáveis podem incluir execução de contrato, cumprimento de obrigação legal/regulatória, exercício regular de direitos, legítimo interesse quando proporcional e consentimento quando necessário. A base deve ser definida para cada finalidade no inventário interno.
 
-## 4. Memória
-Quando habilitada, a memória pode armazenar informações para melhorar o contexto futuro. O usuário deverá possuir mecanismos compatíveis para visualizar, administrar e excluir memórias.
+## 5. Minimização
+Somente dados necessários para cada finalidade devem ser coletados. Dados enviados a modelos de IA, APIs, analytics ou outros terceiros devem ser limitados ao necessário para a operação solicitada.
 
-## 5. Arquivos e projetos
-Arquivos e projetos ficam acessíveis ao proprietário, colaboradores autorizados ou processos explicitamente autorizados, conforme as permissões.
+## 6. Compartilhamento
+Podem atuar como fornecedores/subprocessadores provedores de hospedagem, banco, armazenamento, autenticação, IA, GitHub, MCP, analytics e pagamentos quando habilitados. Cada fornecedor deve ser avaliado e documentado conforme a Política de Terceiros.
 
-## 6. Integrações
-GitHub e servidores MCP devem operar dentro das permissões concedidas pelo usuário e das regras da plataforma.
+## 7. Transferência internacional
+Alguns fornecedores podem processar dados fora do Brasil. Transferências internacionais devem observar os mecanismos e requisitos da LGPD e regulamentação aplicável.
 
-## 7. Segurança
-São utilizados autenticação, autorização, RLS, controle de acesso, validação, rate limiting, proteção de credenciais, criptografia quando aplicável, auditoria e isolamento quando aplicável. Nenhum sistema conectado à internet garante segurança absoluta.
+## 8. Retenção
+Dados devem ser mantidos pelo período necessário à finalidade, à relação contratual, à segurança ou a obrigações legais. Backups seguem ciclo próprio de retenção. Após o prazo aplicável, dados devem ser excluídos ou anonimizados quando tecnicamente e juridicamente possível.
 
-## 8. Retenção e exclusão
-Dados poderão permanecer enquanto necessários às funcionalidades ou à conta, observados requisitos legais. O usuário poderá solicitar/executar exclusão conforme as funcionalidades disponíveis; registros de segurança podem ser mantidos quando necessário.
+## 9. Direitos do titular
+O titular pode exercer, conforme aplicável, confirmação e acesso, correção, anonimização, bloqueio ou eliminação, portabilidade, informação sobre compartilhamentos, revogação de consentimento e outros direitos previstos na LGPD. Solicitações devem ser autenticadas para evitar acesso indevido.
 
-## 9. Cookies
-Cookies podem ser usados para autenticação, segurança, funcionamento e preferências. Tecnologias analíticas não essenciais devem observar consentimento aplicável.
+## 10. Segurança
+O serviço aplica controles técnicos e organizacionais descritos na Política de Segurança. Nenhum sistema conectado à internet é absolutamente seguro.
 
-## 10. Direitos
-Nos termos da legislação aplicável, incluindo a LGPD, o usuário poderá exercer direitos como confirmação, acesso, correção, eliminação e outros previstos em lei pelo canal disponibilizado.
+## 11. Incidentes
+Incidentes envolvendo dados pessoais são avaliados quanto à natureza, escopo, risco e necessidade de comunicação aos titulares e à ANPD, conforme a legislação e regulamentação aplicáveis.
 
-## 11. Menores
-O Open Claude não é destinado a crianças sem autorização e supervisão apropriadas quando exigidas pela legislação.
+## 12. Menores
+O tratamento de dados de crianças e adolescentes deve observar a legislação aplicável e o melhor interesse. Quando necessário, serão adotadas medidas de consentimento, supervisão e verificação compatíveis com o risco e a finalidade.
 
-## 12. Alterações e contato
-A política poderá ser atualizada. A versão vigente será disponibilizada nesta página. Questões de privacidade devem usar o canal oficial de contato.
+## 13. Cookies e analytics
+Cookies necessários podem sustentar autenticação e segurança. Tecnologias não essenciais devem respeitar o mecanismo de consentimento aplicável e a Política de Cookies.
 
-> Esta política descreve o funcionamento pretendido e deve ser revisada juridicamente antes da publicação definitiva.
+## 14. Alterações
+A política pode ser atualizada por mudanças legais, técnicas ou de produto. A versão vigente e o histórico de versões devem permanecer disponíveis.
+
+> Este documento deve ser complementado pelo inventário interno de dados, bases legais, fornecedores e prazos de retenção antes da oferta comercial definitiva.

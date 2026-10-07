@@ -1,0 +1,3 @@
+import Link from 'next/link'
+export const metadata={title:'Segurança'}
+export default function Security(){return <main className="shell"><article className="chat card legal"><p className="kicker">OPEN CLAUDE · SECURITY</p><h1>Política de Segurança</h1><p>O Open Claude aplica autenticação, autorização server-side, RLS, menor privilégio, rate limiting, validação, headers, proteção de segredos, auditoria e sandbox quando disponível.</p><p><Link href="/terms">Termos</Link> · <Link href="/privacy">Privacidade</Link></p><p><a href="/docs/security-policy.md">Documento completo no projeto</a></p></article></main>}

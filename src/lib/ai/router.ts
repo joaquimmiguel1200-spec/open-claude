@@ -1,4 +1,5 @@
-// @ts-nocheck\nimport type { AIProviderConfig,AIRequest,AIResponse,AIStreamEvent } from '@/types/ai'
+// @ts-nocheck
+import type { AIProviderConfig,AIRequest,AIResponse,AIStreamEvent } from '@/types/ai'
 import { calculateCost } from './cost'
 import { AIError } from './errors'
 import { adapterFor } from './provider-adapter'

@@ -2,6 +2,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AIProviderConfig, AIProviderKind } from '@/types/ai'
 import { decryptSecret } from '@/lib/security/encryption'
+import { configuredProviders } from './provider-registry'
 
 const defaults:Record<string,{baseUrl:string;kind:AIProviderKind}> = {
   openrouter:{baseUrl:'https://openrouter.ai/api/v1',kind:'openrouter'},
@@ -13,7 +14,7 @@ const defaults:Record<string,{baseUrl:string;kind:AIProviderKind}> = {
 export async function userAIProviders(client:SupabaseClient,userId:string):Promise<AIProviderConfig[]>{
   const {data,error}=await client.from('api_credentials').select('id,name,provider,base_url,model,encrypted_key,enabled,priority,metadata').eq('user_id',userId).eq('enabled',true).order('priority',{ascending:true})
   if(error) throw new Error(`API credentials lookup failed: ${error.message}`)
-  return (data??[]).flatMap((row:any)=>{
+  const userProviders=(data??[]).flatMap((row:any)=>{
     try{
       const d=defaults[row.provider]??defaults.custom
       const baseUrl=(row.base_url||d.baseUrl).trim()
@@ -30,4 +31,5 @@ export async function userAIProviders(client:SupabaseClient,userId:string):Promi
       return []
     }
   })
+  return [...userProviders,...configuredProviders()].filter((p,index,all)=>p.enabled && all.findIndex(x=>x.id===p.id)===index).sort((a,b)=>a.priority-b.priority)
 }

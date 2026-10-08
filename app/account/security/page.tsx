@@ -19,4 +19,4 @@ export default function SecurityPage(){
  <div className="card" style={{marginTop:16}}><h2>Cookies</h2>{(center?.cookies??[]).map((c:any)=><p className="muted" key={c.name}>• {c.name} · {c.category} · {c.duration}</p>)}</div>
  <div className="card" style={{marginTop:16}}><h2>Alertas / denúncia</h2>{(center?.alerts??[]).length?center.alerts.map((a:any)=><div key={a.id}><strong>{a.title}</strong><p className="muted">{a.message}</p><button className="button secondary" onClick={()=>action({action:'acknowledge',id:a.id})}>Marcar lido</button></div>):<p className="muted">Nenhum alerta pendente.</p>}<textarea rows={4} value={report} onChange={e=>setReport(e.target.value)} placeholder="Descreva um incidente, abuso ou solicitação de revisão…"/><button className="button secondary" onClick={async()=>{await action({action:'report',category:'security',description:report});setReport('')}}>Registrar denúncia</button></div>
  </section></main>
-\n}\n
+\n}\n\n}\n

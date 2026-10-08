@@ -12,15 +12,16 @@ export async function GET(request:Request){
     const {user,supabase}=await requireUser()
     const rl=rateLimit(clientKey(request,user.id),30,60000)
     if(!rl.allowed)return NextResponse.json({error:'Limite excedido.'},{status:429})
-    const [profile,consents,alerts,requests,cookies,acceptances]=await Promise.all([
+    const [profile,consents,alerts,requests,cookies,acceptances,sessions]=await Promise.all([
       supabase.from('profiles').select('id,display_name,avatar_url,created_at,updated_at').eq('id',user.id).maybeSingle(),
       supabase.from('privacy_consents').select('version,necessary,analytics,functional,marketing,accepted_at').eq('user_id',user.id).order('accepted_at',{ascending:false}).limit(1),
       supabase.from('security_alerts').select('id,type,severity,title,message,acknowledged_at,created_at').eq('user_id',user.id).is('acknowledged_at',null).order('created_at',{ascending:false}).limit(20),
       supabase.from('data_subject_requests').select('id,request_type,status,details,created_at,completed_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(20),
       supabase.from('cookie_inventory').select('name,category,purpose,provider,duration,http_only,secure,same_site,active').eq('active',true).order('category'),
       supabase.from('policy_acceptances').select('policy_type,version,accepted_at').eq('user_id',user.id).order('accepted_at',{ascending:false}),
+      supabase.rpc('list_my_sessions'),
     ])
-    const bad=[profile,consents,alerts,requests,cookies,acceptances].find(x=>x.error)
+    const bad=[profile,consents,alerts,requests,cookies,acceptances,sessions].find(x=>x.error)
     if(bad?.error)throw new Error(bad.error.message)
     const {data:session}=await supabase.auth.getSession()
     return NextResponse.json({
@@ -31,6 +32,7 @@ export async function GET(request:Request){
       requests:requests.data??[],
       cookies:cookies.data??[],
       acceptances:acceptances.data??[],
+      sessions:sessions.data??[],
       currentSession:session.session?{userId:user.id,expiresAt:session.session.expires_at??null,accessTokenPresent:true}:null,
     },{headers:{'cache-control':'no-store'}})
   }catch(e){const m=e instanceof Error?e.message:'Falha ao carregar segurança.';return NextResponse.json({error:m},{status:m==='UNAUTHENTICATED'?401:500})}
@@ -85,6 +87,13 @@ export async function POST(request:Request){
       const r=await supabase.from('security_alerts').update({acknowledged_at:new Date().toISOString()}).eq('id',id).eq('user_id',user.id)
       if(r.error)throw new Error(r.error.message)
       return NextResponse.json({ok:true})
+    }
+    if(action==='revokeSession'){
+      const sessionId=String(body?.sessionId??'')
+      if(!sessionId)return NextResponse.json({error:'Sessão inválida.'},{status:400})
+      const {data,error}=await supabase.rpc('revoke_my_session',{target_session_id:sessionId})
+      if(error)throw new Error(error.message)
+      return NextResponse.json({ok:Boolean(data)})
     }
     if(action==='signoutOthers'){
       const {error}=await supabase.auth.signOut({scope:'others'})

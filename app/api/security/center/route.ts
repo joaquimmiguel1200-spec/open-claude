@@ -44,8 +44,8 @@ export async function POST(request:Request){
     const action=String(body?.action??'')
     if(action==='consent'){
       const consent={user_id:user.id,version:POLICY_VERSION,necessary:true,analytics:Boolean(body.analytics),functional:Boolean(body.functional),marketing:Boolean(body.marketing),source:'settings',accepted_at:new Date().toISOString()}
-      const r=await supabase.from('privacy_consents').upsert(consent,{onConflict:'user_id,version'})
-      if(r.error)throw new Error(r.error.message)
+      const r=await supabase.from('privacy_consents').insert(consent)
+      if(r.error && r.error.code!=='23505')throw new Error(r.error.message)
       return NextResponse.json({ok:true})
     }
     if(action==='correction'){

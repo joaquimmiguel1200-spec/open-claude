@@ -5,6 +5,7 @@ import { clientKey, rateLimit } from '@/lib/security/rate-limit'
 export const runtime='nodejs'
 async function exportAccount(userId:string){
  const {supabase}=await requireUser()
+ const admin=createSupabaseAdminClient()
  const results=await Promise.all([
   supabase.from('profiles').select('id,display_name,avatar_url,preferences,created_at,updated_at').eq('id',userId).maybeSingle(),
   supabase.from('projects').select('*').eq('owner_id',userId),
@@ -26,7 +27,7 @@ async function exportAccount(userId:string){
   supabase.from('data_subject_requests').select('*').eq('user_id',userId),
   supabase.from('security_reports').select('*').eq('reporter_id',userId),
   supabase.from('security_alerts').select('*').eq('user_id',userId),
-  supabase.from('subprocessor_deletion_jobs').select('*').eq('user_id',userId),
+  admin.from('subprocessor_deletion_jobs').select('*').eq('user_id',userId),
   supabase.from('audit_logs').select('*').eq('user_id',userId).order('created_at',{ascending:false}).limit(5000),
   supabase.from('skills').select('*').eq('owner_id',userId),
   supabase.from('user_skills').select('*').eq('user_id',userId),

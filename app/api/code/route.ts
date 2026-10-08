@@ -6,6 +6,7 @@ import { createGitHubClientFromEnv } from '@/lib/github/github-client'
 import { createCodeAgent } from '@/lib/code-agent/code-agent'
 import type { AIRoutingStrategy } from '@/types/ai'
 import { clientKey, rateLimit } from '@/lib/security/rate-limit'
+import { createVercelSandboxRunner } from '@/lib/sandbox/vercel-sandbox-runner'
 
 export const runtime = 'nodejs'
 
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
     const branch = String(body?.branch ?? process.env.GITHUB_DEFAULT_BRANCH ?? 'main').trim()
     const paths = Array.isArray(body?.paths) ? body.paths.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, 20) : []
     const apply = body?.apply === true
+    const testCommand = typeof body?.testCommand === 'string' ? body.testCommand.trim() : ''
     const strategies: AIRoutingStrategy[] = ['auto','quality','cost','latency','free']
     const strategy = strategies.includes(body?.strategy) ? body.strategy : 'free'
     if (!goal || goal.length > 12000) return NextResponse.json({ error: 'O objetivo Code é obrigatório.' }, { status: 400 })
@@ -65,9 +67,29 @@ export async function POST(request: Request) {
 
     if (!apply) return NextResponse.json({ mode: 'code', applied: false, repository, branch, summary: String(plan.summary ?? ''), commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), edits, model: response.model, provider: response.provider }, { headers: { 'Cache-Control': 'no-store' } })
 
-    const agent = createCodeAgent(github)
-    const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes') })
-    return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
+    const sandboxRunner=createVercelSandboxRunner()
+    const testConfig=testCommand?{image:'node22',commands:[testCommand.split(/\\s+/).filter(Boolean)],files:snapshots.map(x=>({path:x.path,content:x.content})),allowNetwork:false,workingDirectory:'/vercel/sandbox'}:undefined
+    const agent = createCodeAgent(github,{
+      sandboxRunner,
+      maxTestIterations:3,
+      revise: async (ctx)=>{
+        const revision=await generateAI({
+          model:typeof body?.model==='string'?body.model.trim():undefined,
+          strategy,
+          signal:request.signal,
+          maxTokens:24000,
+          messages:[
+            {role:'system',content:'You are Open Claude Code. Return ONLY valid JSON: {"edits":[{"path":string,"content":string}]}. Fix the failing sandbox tests. Only edit files originally supplied.'},
+            {role:'user',content:`GOAL:\n${goal}\n\nITERATION: ${ctx.iteration}\n\nFAILURES:\n${ctx.tests.filter(t=>!t.success).map(t=>t.command.join(' ')+'\\nSTDOUT:\n'+t.stdout+'\\nSTDERR:\n'+t.stderr).join('\\n\\n')}\n\nCURRENT FILES:\n${ctx.edits.map(x=>'FILE: '+x.path+'\\n'+x.content).join('\\n\\n')}`}
+          ],
+          metadata:{mode:'code-revision',userId:user.id,repository,branch,strategy}
+        },providers)
+        const revised=extractJson(revision.content)
+        return Array.isArray(revised?.edits)?revised.edits.map((x:any)=>{const old=edits.find(e=>e.path===String(x.path));return {path:String(x.path),kind:'update' as const,content:String(x.content??''),expectedSha:old?.expectedSha}}):null
+      }
+    })
+    const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })
+    return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider, testCommand: testCommand||null }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Não foi possível executar o Code Agent.'
     return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })

@@ -1,4 +1,5 @@
-// @ts-nocheck\nimport { NextResponse } from 'next/server'
+// @ts-nocheck
+import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/supabase/server'
 import { encryptSecret,maskSecret } from '@/lib/security/encryption'
 function validUrl(value:string){try{const u=new URL(value);return u.protocol==='https:'||process.env.NODE_ENV!=='production'}catch{return false}}

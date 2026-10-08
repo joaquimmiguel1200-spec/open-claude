@@ -23,6 +23,8 @@ export async function POST(request:Request){
   const {data,error}=await supabase.auth.signInWithPassword({email,password})
   await admin.from('auth_attempts').insert({email_hash:emailHash,ip_hash:ipHash,success:!error,reason:error?.code??null})
   if(error)return NextResponse.json({error:error.code==='email_not_confirmed'?'Confirme seu e-mail antes de entrar.':'E-mail ou senha inválidos.'},{status:401})
+  const activeSuspension=await admin.from('account_suspensions').select('id,ends_at').eq('user_id',data.user?.id??'').eq('active',true).or('ends_at.is.null,ends_at.gt.'+new Date().toISOString()).limit(1).maybeSingle()
+  if(activeSuspension.data){await supabase.auth.signOut({scope:'global'});return NextResponse.json({error:'Login temporariamente bloqueado por segurança.'},{status:429})}
   const {data:factors}=await supabase.auth.mfa.listFactors()
   const verified=(factors?.all??[]).filter((f:any)=>f.status==='verified')
   const {data:aal}=await supabase.auth.mfa.getAuthenticatorAssuranceLevel()

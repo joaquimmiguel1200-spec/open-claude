@@ -85,7 +85,7 @@ export async function POST(request: Request) {
           metadata:{mode:'code-revision',userId:user.id,repository,branch,strategy}
         },providers)
         const revised=extractJson(revision.content)
-        return Array.isArray(revised?.edits)?revised.edits.map((x:any)=>{const old=edits.find(e=>e.path===String(x.path));return {path:String(x.path),kind:'update' as const,content:String(x.content??''),expectedSha:old?.expectedSha}}):null
+        return Array.isArray(revised?.edits)?revised.edits.map((x:any)=>{const old=edits.find((e:any)=>e.path===String(x.path));return {path:String(x.path),kind:'update' as const,content:String(x.content??''),expectedSha:old?.expectedSha}}):null
       }
     })
     const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })

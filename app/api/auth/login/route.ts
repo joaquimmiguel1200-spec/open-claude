@@ -18,7 +18,7 @@ export async function POST(request:Request){
   if(!rl.allowed)return NextResponse.json({error:'Muitas tentativas. Aguarde alguns minutos.'},{status:429,headers:{'Retry-After':String(Math.ceil((rl.resetAt-Date.now())/1000))}})
   const admin=createSupabaseAdminClient()
   const {data:recent}=await admin.from('auth_attempts').select('id').eq('email_hash',emailHash).eq('success',false).gt('created_at',new Date(Date.now()-15*60*1000).toISOString()).limit(20)
-  if((recent??[]).length>=12)return NextResponse.json({error:'Login temporariamente bloqueado por tentativas suspeitas.'},{status:429})
+  if((recent??[]).length>=12){try{const users=await admin.auth.admin.listUsers({page:1,perPage:1000});const target=users.data?.users?.find((u:any)=>String(u.email??'').toLowerCase()===email);if(target)await admin.from('account_suspensions').insert({user_id:target.id,reason:'Credential stuffing protection: repeated failed login attempts',source:'automatic',starts_at:new Date().toISOString(),ends_at:new Date(Date.now()+30*60*1000).toISOString(),active:true,metadata:{ip_hash:ipHash}})}catch{}return NextResponse.json({error:'Login temporariamente bloqueado por tentativas suspeitas.'},{status:429})}
   const supabase=await createSupabaseServerClient()
   const {data,error}=await supabase.auth.signInWithPassword({email,password})
   await admin.from('auth_attempts').insert({email_hash:emailHash,ip_hash:ipHash,success:!error,reason:error?.code??null})

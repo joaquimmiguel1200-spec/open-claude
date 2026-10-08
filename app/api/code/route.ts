@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     if (!apply) return NextResponse.json({ mode: 'code', applied: false, repository, branch, summary: String(plan.summary ?? ''), commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), edits, model: response.model, provider: response.provider }, { headers: { 'Cache-Control': 'no-store' } })
 
     const sandboxRunner=createVercelSandboxRunner()
-    const testConfig=testCommand?{image:'node22',commands:[testCommand.split(/\\s+/).filter(Boolean)],files:snapshots.map(x=>({path:x.path,content:x.content})),allowNetwork:false,workingDirectory:'/vercel/sandbox'}:undefined
+    const testConfig=testCommand?{image:'node22',commands:[testCommand.split(/\s+/).filter(Boolean)],files:snapshots.map(x=>({path:x.path,content:x.content})),allowNetwork:false,workingDirectory:'/vercel/sandbox'}:undefined
     const agent = createCodeAgent(github,{
       sandboxRunner,
       maxTestIterations:3,

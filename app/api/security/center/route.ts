@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/supabase/server'
 import { rateLimit, clientKey } from '@/lib/security/rate-limit'
+import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 
 export const runtime='nodejs'
 const POLICY_VERSION='2026-10-07'
@@ -58,8 +59,17 @@ export async function POST(request:Request){
     if(action==='request'){
       const type=String(body?.type??'')
       if(!['access','correction','portability','deletion','restriction','subprocessor'].includes(type))return NextResponse.json({error:'Tipo de solicitação inválido.'},{status:400})
-      const r=await supabase.from('data_subject_requests').insert({user_id:user.id,request_type:type,details:typeof body.details==='object'&&body.details?body.details:{}})
+      const details=typeof body.details==='object'&&body.details?body.details:{}
+      const r=await supabase.from('data_subject_requests').insert({user_id:user.id,request_type:type,details})
       if(r.error)throw new Error(r.error.message)
+      if(type==='subprocessor'){
+        const admin=createSupabaseAdminClient()
+        const jobs=[{user_id:user.id,processor:'supabase',reference:user.id,status:'queued',metadata:{source:'data_subject_request',requires_provider_confirmation:true}}]
+        const {data:githubConnection}=await admin.from('github_connections').select('id').eq('user_id',user.id).limit(1).maybeSingle()
+        if(githubConnection)jobs.push({user_id:user.id,processor:'github',reference:String(githubConnection.id),status:'queued',metadata:{source:'data_subject_request',requires_provider_confirmation:true}})
+        const jr=await admin.from('subprocessor_deletion_jobs').insert(jobs)
+        if(jr.error)throw new Error(jr.error.message)
+      }
       return NextResponse.json({ok:true})
     }
     if(action==='report'){

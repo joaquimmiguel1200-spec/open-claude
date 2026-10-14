@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation'
-
-export default function APIsSettingsPage() {
-  redirect('/settings?tab=apis')
-}
+'use client'
+import SettingsPage from '../page'
+export default function APIsSettingsPage(){return <SettingsPage initialTab="apis" />}

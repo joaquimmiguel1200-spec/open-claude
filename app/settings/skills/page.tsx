@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation'
-
-export default function SkillsSettingsPage() {
-  redirect('/settings?tab=skills')
-}
+'use client'
+import SettingsPage from '../page'
+export default function SkillsSettingsPage(){return <SettingsPage initialTab="skills" />}

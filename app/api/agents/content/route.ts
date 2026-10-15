@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
-const ALLOWED = new Set(['msitarzewski/agency-agents', 'wshobson/agents'])
+const ALLOWED = new Set(['msitarzewski/agency-agents', 'wshobson/agents', 'codenamev/ai-software-architect', 'softaworks/agent-toolkit'])
 export async function GET(request: Request) {
   try {
     await requireUser()

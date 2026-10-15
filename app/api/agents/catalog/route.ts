@@ -39,7 +39,8 @@ function titleFromPath(path: string) {
 }
 function categoryFromPath(path: string) {
   const parts = path.split('/')
-  return (parts.length > 1 ? parts[0] : 'General').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const category = parts[0] === 'plugins' && parts[2] === 'agents' ? parts[1] : (parts.length > 1 ? parts[0] : 'General')
+  return category.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 async function getTree(owner: string, repo: string, branch: string): Promise<any[]> {
   const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, {
@@ -58,12 +59,12 @@ export async function GET() {
       const tree = await getTree(source.owner, source.repo, source.branch)
       return tree.filter((item: any) => item.type === 'blob' && /\.md$/i.test(item.path) && !/(^|\/)(readme|contributing|license|changelog|code_of_conduct)(\.md)?$/i.test(item.path) && (
         source.repo === 'agency-agents'
-          ? /^(engineering|design|marketing|product|project-management|testing|support|spatial-computing|specialized|paid-media|strategy|sales|finance|legal|operations|game-development|academic|business|data|security|hr|social-media)\//i.test(item.path)
+          ? /^(academic|design|engineering|finance|game-development|gis|healthcare|integrations|marketing|paid-media|product|project-management|research|sales|security|spatial-computing|specialized|strategy|support|testing)\//i.test(item.path)
           : /(^|\/)(agents|plugins\/[^/]+\/agents)\//i.test(item.path)
       )).map((item: any): Agent => {
         const path = String(item.path)
         const raw = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${source.branch}/${path.split('/').map(encodeURIComponent).join('/')}`
-        return { id: `${source.owner}/${source.repo}:${path}`, name: titleFromPath(path), category: categoryFromPath(path), source: source.label, repository: `${source.owner}/${source.repo}`, path, url: raw, description: `Agente especializado importado do repositório ${source.owner}/${source.repo}.` }
+        return { id: `${source.owner}/${source.repo}:${path}`, name: titleFromPath(path), category: categoryFromPath(path), source: source.label, repository: `${source.owner}/${source.repo}`, path, url: raw, description: `Especialista em ${categoryFromPath(path).toLowerCase()}, importado de ${source.owner}/${source.repo}. Abra para carregar as instruções completas.` }
       })
     }))
     const remoteAgents = settled.flatMap(result => result.status === 'fulfilled' ? result.value : [])

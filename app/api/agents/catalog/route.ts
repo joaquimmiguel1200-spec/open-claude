@@ -7,6 +7,8 @@ export const revalidate = 3600
 const SOURCES = [
   { owner: 'msitarzewski', repo: 'agency-agents', branch: 'main', label: 'The Agency' },
   { owner: 'wshobson', repo: 'agents', branch: 'main', label: 'wshobson/agents' },
+  { owner: 'codenamev', repo: 'ai-software-architect', branch: 'main', label: 'AI Software Architect' },
+  { owner: 'softaworks', repo: 'agent-toolkit', branch: 'main', label: 'Softaworks Agent Toolkit' },
 ] as const
 
 type Agent = { id: string; name: string; category: string; source: string; repository: string; path: string; url: string; description: string; instructions?: string }
@@ -60,7 +62,9 @@ export async function GET() {
       return tree.filter((item: any) => item.type === 'blob' && /\.md$/i.test(item.path) && !/(^|\/)(readme|contributing|license|changelog|code_of_conduct)(\.md)?$/i.test(item.path) && (
         source.repo === 'agency-agents'
           ? /^(academic|design|engineering|finance|game-development|gis|healthcare|integrations|marketing|paid-media|product|project-management|research|sales|security|spatial-computing|specialized|strategy|support|testing)\//i.test(item.path)
-          : /(^|\/)(agents|plugins\/[^/]+\/agents)\//i.test(item.path)
+          : source.repo === 'agents'
+            ? /^plugins\/[^/]+\/agents\//i.test(item.path)
+            : /^agents\/[^/]+\.md$/i.test(item.path)
       )).map((item: any): Agent => {
         const path = String(item.path)
         const raw = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${source.branch}/${path.split('/').map(encodeURIComponent).join('/')}`

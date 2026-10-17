@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 
 type Connection = { connected: boolean; accountLogin: string | null; scopes: string[]; connectedAt: string | null }
@@ -25,7 +25,7 @@ export default function GitHubSettingsPage() {
   }
   useEffect(() => { load() }, [])
 
-  async function connect(e: React.FormEvent) {
+  async function connect(e: FormEvent) {
     e.preventDefault(); setBusy(true); setError(''); setMessage('')
     try {
       const response = await fetch('/api/github/connection', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token }) })

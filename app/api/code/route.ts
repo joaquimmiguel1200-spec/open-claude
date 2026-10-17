@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/supabase/server'
 import { userAIProviders } from '@/lib/ai/user-providers'
 import { generateAI } from '@/lib/ai'
-import { createGitHubClientFromEnv } from '@/lib/github/github-client'
+import { createGitHubClientForUser } from '@/lib/github/user-github-client'
 import { createCodeAgent } from '@/lib/code-agent/code-agent'
 import type { AIRoutingStrategy } from '@/types/ai'
 import { clientKey, rateLimit } from '@/lib/security/rate-limit'
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     if (!paths.length) return NextResponse.json({ error: 'Informe pelo menos um caminho de arquivo para o Code Agent analisar.' }, { status: 400 })
 
     const [owner, repo] = repository.split('/')
-    const github = createGitHubClientFromEnv()
+    const github = await createGitHubClientForUser(supabase, user.id)
     const snapshots = [] as Array<{ path: string; sha: string; content: string }>
     for (const path of paths) {
       const file = await github.getFile(owner, repo, path, branch, request.signal)

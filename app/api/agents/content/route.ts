@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const [owner, repo] = repository.split('/')
     const branch = 'main'
     const raw = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path.split('/').map(encodeURIComponent).join('/')}`
-    const response = await fetch(raw, { headers: { 'User-Agent': 'Open-Claude-Agent-Catalog' }, next: { revalidate: 3600 } })
+    const response = await fetch(raw, { headers: { 'User-Agent': 'Open-Claude-Agent-Catalog' }, signal: AbortSignal.timeout(10000), next: { revalidate: 3600 } })
     if (!response.ok) return NextResponse.json({ error: 'Não foi possível carregar as instruções do agente.' }, { status: 502 })
     const instructions = (await response.text()).slice(0, 50000)
     return NextResponse.json({ instructions, repository, path }, { headers: { 'Cache-Control': 'private, max-age=300, stale-while-revalidate=3600' } })

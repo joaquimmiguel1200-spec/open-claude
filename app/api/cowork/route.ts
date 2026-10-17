@@ -43,8 +43,8 @@ export async function POST(request: Request) {
       signal: controller.signal,
     })
 
+    const persistence = createPersistence(supabase)
     if (result.status === 'completed' && body?.chatId) {
-      const persistence = createPersistence(supabase)
       await persistence.appendMessage({
         chatId: body.chatId,
         userId: user.id,
@@ -53,6 +53,14 @@ export async function POST(request: Request) {
         metadata: { mode: 'cowork', runId: result.runId, status: result.status, tasks: result.plan.tasks.length },
       })
     }
+    await persistence.audit({
+      userId: user.id,
+      projectId: typeof body?.projectId === 'string' ? body.projectId : null,
+      action: 'cowork.run',
+      resourceType: 'cowork_run',
+      resourceId: result.runId,
+      metadata: { status: result.status, tasks: result.plan.tasks.length },
+    })
 
     return NextResponse.json({
       runId: result.runId,
@@ -60,7 +68,7 @@ export async function POST(request: Request) {
       plan: result.plan,
       events: result.events,
       error: result.error,
-    }, { headers: { 'Cache-Control': 'no-store' } })
+    }, { status: result.status === 'completed' ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Não foi possível executar o Cowork.'
     return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })

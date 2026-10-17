@@ -3,7 +3,7 @@ import Link from 'next/link'
 const features = [
   ['Contexto contínuo', 'Memória, projetos e arquivos trabalham juntos para a conversa não começar do zero.'],
   ['Canvas vivo', 'Transforme respostas em documentos, código, fluxos e artefatos editáveis.'],
-  ['Ferramentas conectadas', 'Skills, APIs, GitHub, MCP e Cowork ficam no mesmo workspace.'],
+  ['Ferramentas conectadas', 'Configure provedores de IA, Skills e integrações autorizadas no mesmo workspace. Algumas funções exigem credenciais próprias.'],
 ]
 
 export default function HomePage() {
@@ -25,10 +25,10 @@ export default function HomePage() {
         <div className="hero-content">
           <p className="kicker">PERSONAL AI WORKSPACE · OPEN CLAUDE</p>
           <h1>De uma ideia<br /><span>ao trabalho real.</span></h1>
-          <p className="hero-copy">Converse, pense, codifique e transforme respostas em trabalho editável — com contexto, arquivos, ferramentas e Canvas no mesmo espaço.</p>
+          <p className="hero-copy">Converse, planeje código e organize tarefas em um workspace. Conecte seu provedor de IA para habilitar geração real; Code e Cowork também dependem das integrações e permissões necessárias.</p>
           <div className="actions">
-            <Link className="button glow" href="/signup">Começar agora ↗</Link>
-            <Link className="button secondary" href="/chat">Abrir workspace</Link>
+            <Link className="button glow" href="/signup">Criar conta gratuita ↗</Link>
+            <Link className="button secondary" href="/login">Entrar no workspace</Link>
           </div>
         </div>
         <div className="hero-window" id="canvas" aria-label="Prévia do workspace">

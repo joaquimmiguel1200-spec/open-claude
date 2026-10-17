@@ -44,6 +44,7 @@ export default function ChatPage() {
         const paths=codePaths.split(',').map(x=>x.trim()).filter(Boolean).slice(0,20);
         if(!codeRepository.match(/^[^/\s]+\/[^/\s]+$/)){setAnswer('No modo Code, informe o repositório no formato owner/repository.');return}
         if(!paths.length){setAnswer('No modo Code, informe pelo menos um arquivo em Caminhos.');return}
+        if(!codeTestCommand.trim()){setAnswer('Antes de aplicar alterações no GitHub, informe um comando de teste para a sandbox (por exemplo, npm test).');return}
         const res=await fetch('/api/code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({goal:message,repository:codeRepository,branch:codeBranch||'main',paths,model:model||undefined,apply:true,testCommand:codeTestCommand.trim()||undefined})});
         const data=await res.json().catch(()=>({}));
         if(!res.ok){setAnswer(data.error||'O Code Agent não conseguiu concluir a alteração.');return}

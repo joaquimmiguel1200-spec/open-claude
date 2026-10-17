@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { requireUser } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const revalidate = 3600
@@ -48,7 +47,6 @@ import catalogManifest from '@/lib/agents/catalog.json'
 
 export async function GET() {
   try {
-    await requireUser()
     const remoteAgents = Array.isArray(catalogManifest.agents) ? catalogManifest.agents as Agent[] : []
     const agents = [...BUILT_IN, ...remoteAgents]
     const sources = [
@@ -57,7 +55,7 @@ export async function GET() {
     ]
     agents.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
     return NextResponse.json({ agents, sources, total: agents.length, updatedAt: catalogManifest.generatedAt }, {
-      headers: { 'Cache-Control': 'private, max-age=300, stale-while-revalidate=3600' }
+      headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600' }
     })
   } catch (error) {
     const status = error instanceof Error && error.message === 'UNAUTHENTICATED' ? 401 : 500

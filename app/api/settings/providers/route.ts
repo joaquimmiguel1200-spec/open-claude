@@ -9,8 +9,8 @@ function validUrl(value:string,provider:string){
   const production=process.env.NODE_ENV==='production'
   if(production&&u.protocol!=='https:')return false
   if(!production&&u.protocol!=='https:'&&u.protocol!=='http:')return false
-  const host=u.hostname.toLowerCase().replace(/\\.$/,'')
-  if(production&&(host==='localhost'||host.endsWith('.localhost')||host.endsWith('.local')||host.endsWith('.internal')||host==='metadata.google.internal'||/^\\d{1,3}(\\.\\d{1,3}){3}$/.test(host)||host.startsWith('[')))return false
+  const host=u.hostname.toLowerCase().replace(/\.$/,'')
+  if(production&&(host==='localhost'||host.endsWith('.localhost')||host.endsWith('.local')||host.endsWith('.internal')||host==='metadata.google.internal'||/^\d{1,3}(\.\d{1,3}){3}$/.test(host)||host.startsWith('[')))return false
   const official:Record<string,string>={openrouter:'openrouter.ai',openai:'api.openai.com',anthropic:'api.anthropic.com'}
   if(provider!=='custom'&&official[provider]&&host!==official[provider])return false
   return true

@@ -56,8 +56,8 @@ export default function ChatPage() {
         const res=await fetch('/api/cowork',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({goal:message,chatId:activeChatId,projectId:projectId||undefined,model:model||undefined,strategy:'free',maxTasks:5,concurrency:3})});
         const data=await res.json().catch(()=>({}));
         if(!res.ok){setAnswer(data.error||'O Cowork não conseguiu concluir a tarefa.');return}
-        const tasks=(data.plan?.tasks??[]).map((task:any)=>{const status=task.status==='completed'?'✓':task.status==='failed'?'✗':task.status==='cancelled'?'–':'•';const result=typeof task.result==='string'?task.result:task.result?JSON.stringify(task.result):task.error||'Sem resultado';return status+' '+task.title+'\\n'+result});
-        setAnswer(['Cowork · '+String(data.status||'sem status'),...tasks].join('\\n\\n'));
+        const tasks=(data.plan?.tasks??[]).map((task:any)=>{const status=task.status==='completed'?'✓':task.status==='failed'?'✗':task.status==='cancelled'?'–':'•';const result=typeof task.result==='string'?task.result:task.result?JSON.stringify(task.result):task.error||'Sem resultado';return status+' '+task.title+'\n'+result});
+        setAnswer(['Cowork · '+String(data.status||'sem status'),...tasks].join('\n\n'));
         setMessage('');loadWorkspace();return
       }
       const res=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json',accept:'text/event-stream'},body:JSON.stringify({message,chatId:activeChatId,projectId:projectId||undefined,mode,model:model||undefined,customInstructions,honeypot:'',stream:true})});

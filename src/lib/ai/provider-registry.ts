@@ -28,7 +28,7 @@ export function createOmniRouteConfig():AIProviderConfig|null{
   const configuredModel=(!rawModel||rawModel==='nvidia/nemotron-3-ultra-550b-a55b-20260604:free')?DEFAULT_OPENROUTER_MODEL:rawModel
   const ids=[configuredModel,...configuredModelIds()].filter((id,index,all)=>id&&all.indexOf(id)===index)
   const models=ids.map(modelFromId)
-  return{id:'omniroute',name:'OmniRoute / OpenRouter',kind:'omniroute',baseUrl:baseUrl.replace(/\/$/,''),apiKeyEnv:'OMNIROUTE_API_KEY',enabled:true,priority:Number(process.env.AI_PROVIDER_PRIORITY||1000),timeoutMs:Number(process.env.AI_TIMEOUT_MS||120000),maxRetries:Number(process.env.AI_MAX_RETRIES||2),models}
+  return{id:'omniroute',name:'OmniRoute / OpenRouter',kind:'omniroute',baseUrl:baseUrl.replace(/\/$/,''),apiKeyEnv:'OMNIROUTE_API_KEY',enabled:Boolean(process.env.OMNIROUTE_API_KEY?.trim()),priority:Number(process.env.AI_PROVIDER_PRIORITY||1000),timeoutMs:Number(process.env.AI_TIMEOUT_MS||120000),maxRetries:Number(process.env.AI_MAX_RETRIES||2),models}
 }
 
 export function configuredProviders(extra:AIProviderConfig[]=[]):AIProviderConfig[]{const omni=createOmniRouteConfig();return[...extra,...(omni?[omni]:[])].filter(p=>p.enabled).sort((a,b)=>a.priority-b.priority)}

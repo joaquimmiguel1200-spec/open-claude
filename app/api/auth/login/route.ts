@@ -29,5 +29,5 @@ export async function POST(request:Request){
   const verified=(factors?.all??[]).filter((f:any)=>f.status==='verified')
   const {data:aal}=await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
   return NextResponse.json({ok:true,userId:data.user?.id,needsMfa:Boolean(verified.length&&aal?.currentLevel!=='aal2')})
- }catch(e){return NextResponse.json({error:e instanceof Error?e.message:'Falha no login.'},{status:500})}
+ }catch{return NextResponse.json({error:'Não foi possível entrar agora.'},{status:500})}
 }

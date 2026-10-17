@@ -17,6 +17,8 @@ function key() {
 /** Authenticated encryption for provider credentials and other server-side secrets.
  * New values use a versioned envelope; the legacy 3-part envelope remains readable.
  */
+export function assertEncryptionConfigured() { void key() }
+
 export function encryptSensitive(plaintext: string) {
   if (typeof plaintext !== 'string') throw new TypeError('Plaintext must be a string.')
   const iv = randomBytes(IV_BYTES)

@@ -27,7 +27,7 @@ export default function HomePage() {
           <h1>De uma ideia<br /><span>ao trabalho real.</span></h1>
           <p className="hero-copy">Converse, planeje código e organize tarefas em um workspace. Conecte seu provedor de IA para habilitar geração real; Code e Cowork também dependem das integrações e permissões necessárias.</p>
           <div className="actions">
-            <Link className="button glow" href="/signup">Criar conta gratuita ↗</Link>
+            <Link className="button glow" href="/signup">Criar conta ↗</Link>
             <Link className="button secondary" href="/login">Entrar no workspace</Link>
           </div>
         </div>

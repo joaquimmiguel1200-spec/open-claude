@@ -9,8 +9,9 @@ const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024
 function key() {
   const raw = process.env.APP_ENCRYPTION_KEY
   if (!raw) throw new Error('APP_ENCRYPTION_KEY is not configured.')
-  const buffer = Buffer.from(raw, 'base64')
-  if (buffer.length !== 32) throw new Error('APP_ENCRYPTION_KEY must be a base64-encoded 32-byte key.')
+  const normalized = raw.trim()
+  const buffer = /^[0-9a-f]{64}$/i.test(normalized) ? Buffer.from(normalized, 'hex') : Buffer.from(normalized, 'base64')
+  if (buffer.length !== 32) throw new Error('APP_ENCRYPTION_KEY must be a 32-byte key encoded as base64 or 64-character hex.')
   return buffer
 }
 

@@ -24,6 +24,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       models,
       selected: requested && models.some((model) => model.id === requested) ? requested : models[0]?.id ?? null,
+      configured: models.length > 0,
+      message: models.length > 0 ? null : 'Nenhum provedor de IA configurado. Adicione uma chave em APIs & Configurações e teste a conexão.',
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Não foi possível carregar os modelos.'

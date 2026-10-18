@@ -5,14 +5,20 @@ import { createDefaultToolEngine } from '@/lib/tools/default-tool-engine'
 
 type CoworkTaskRunnerOptions = { supabase?: SupabaseClient }
 
-function requestedReadTools(goal: string, taskTitle: string) {
+type RequestedTool = { name: string; input: Record<string, unknown> }
+
+function requestedReadTools(goal: string, taskTitle: string): RequestedTool[] {
   if (taskTitle.toLowerCase() !== 'execute') return []
-  const tools: string[] = []
-  if (/\b(que horas|hor[aá]rio atual|data de hoje|que dia é hoje|dia de hoje)\b/i.test(goal)) tools.push('current_time')
-  if (/\b(meus projetos|lista de projetos|listar projetos|liste projetos|quais projetos|mostrar projetos|mostre projetos|projetos recentes)\b/i.test(goal)) tools.push('workspace.list_projects')
-  if (/\b(minhas conversas|conversas recentes|chats recentes|hist[oó]rico de conversas|listar conversas|liste conversas|mostrar conversas|mostre conversas|quais conversas)\b/i.test(goal)) tools.push('workspace.recent_chats')
-  if (/\b(meus arquivos|arquivos do projeto|listar arquivos|liste arquivos|mostrar arquivos|mostre arquivos|quais arquivos|arquivos recentes)\b/i.test(goal)) tools.push('workspace.list_files')
-  return [...new Set(tools)]
+  const tools: RequestedTool[] = []
+  if (/\b(que horas|hor[aá]rio atual|data de hoje|que dia é hoje|dia de hoje)\b/i.test(goal)) tools.push({name:'current_time',input:{}})
+  if (/\b(meus projetos|lista de projetos|listar projetos|liste projetos|quais projetos|mostrar projetos|mostre projetos|projetos recentes)\b/i.test(goal)) tools.push({name:'workspace.list_projects',input:{}})
+  if (/\b(minhas conversas|conversas recentes|chats recentes|hist[oó]rico de conversas|listar conversas|liste conversas|mostrar conversas|mostre conversas|quais conversas)\b/i.test(goal)) tools.push({name:'workspace.recent_chats',input:{}})
+  if (/\b(meus arquivos|arquivos do projeto|listar arquivos|liste arquivos|mostrar arquivos|mostre arquivos|quais arquivos|arquivos recentes)\b/i.test(goal)) tools.push({name:'workspace.list_files',input:{}})
+  const fileMatch = goal.match(/(?:ler|leia|abrir|abra|conte[uú]do de|mostrar conte[uú]do de)\s+(?:o\s+)?(?:arquivo\s+)?["'`]?([A-Za-z0-9._/-]+\.[A-Za-z0-9_-]+)["'`]?/i)
+  if (fileMatch?.[1] && !/\.env|secret|credential|token|private|\.pem$|\.key$|id_rsa|\.p12$|\.pfx$/i.test(fileMatch[1])) {
+    tools.push({name:'workspace.read_file',input:{name:fileMatch[1]}})
+  }
+  return tools.filter((tool,index,all)=>all.findIndex(item=>item.name===tool.name&&JSON.stringify(item.input)===JSON.stringify(tool.input))===index)
 }
 
 export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRunnerOptions = {}): CoworkTaskRunner {
@@ -41,6 +47,38 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
                 .limit(20)
               if (error) throw new Error("Could not read the user projects.")
               return { count: data?.length ?? 0, projects: data ?? [] }
+            },
+          })
+          engine.registry.register({
+            name: 'workspace.read_file',
+            description: 'Read a matching text source file owned by the authenticated user; secrets and binary files are blocked.',
+            inputSchema: { type: 'object', properties: { name: { type: 'string', minLength: 1, maxLength: 240 } }, required: ['name'], additionalProperties: false },
+            requiresPermission: false,
+            dangerous: false,
+            timeoutMs: 10_000,
+            maxOutputChars: 50_000,
+          }, {
+            async execute(rawInput, context) {
+              if (!context.userId) throw new Error('Authenticated user context is required.')
+              const name = String((rawInput as any)?.name ?? '').trim()
+              if (!name || name.length > 240 || /\.env|secret|credential|token|private|\.pem$|\.key$|id_rsa|\.p12$|\.pfx$/i.test(name)) throw new Error('This file is not eligible for AI reading.')
+              const baseQuery = options.supabase!.from('files')
+                .select('id,name,folder_path,project_id,storage_bucket,storage_path,mime_type,size_bytes')
+                .eq('owner_id', context.userId)
+                .eq('name', name)
+              const scopedQuery = context.projectId ? baseQuery.eq('project_id', context.projectId) : baseQuery
+              const { data, error } = await scopedQuery.limit(2)
+              if (error) throw new Error('Could not locate the requested file.')
+              if (!data?.length) throw new Error('File not found in the current workspace.')
+              if (data.length > 1) throw new Error('Multiple files have that name. Specify a unique file name or project.')
+              const file = data[0]
+              const allowed = /\.(md|txt|json|csv|ts|tsx|js|jsx|mjs|cjs|py|sql|yaml|yml|toml|css|html|xml|sh|go|rs|java|kt|swift|php|rb|vue|svelte)$/i.test(file.name)
+              if (!allowed || !file.storage_bucket || !file.storage_path || Number(file.size_bytes ?? 0) > 1_000_000) throw new Error('Only text/source files up to 1 MB can be read by Cowork.')
+              const { data: blob, error: downloadError } = await options.supabase!.storage.from(file.storage_bucket).download(file.storage_path)
+              if (downloadError || !blob) throw new Error('The file could not be read with the current user permissions.')
+              const content = await blob.text()
+              if (content.length > 50_000) throw new Error('The file exceeds the Cowork text output limit.')
+              return { file: { id: file.id, name: file.name, projectId: file.project_id, folderPath: file.folder_path }, content }
             },
           })
           engine.registry.register({
@@ -86,14 +124,14 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
         }
 
         const outputs: Array<{ tool: string; status: string; output?: unknown; error?: string }> = []
-        for (const toolName of requested) {
+        for (const requestedTool of requested) {
           const result = await engine.execute({
-            toolName,
-            input: {},
+            toolName: requestedTool.name,
+            input: requestedTool.input,
             context: { userId: input.userId, projectId: input.projectId ?? undefined, chatId: input.chatId ?? undefined, signal },
           })
           outputs.push({
-            tool: toolName,
+            tool: requestedTool.name,
             status: result.status,
             ...(result.status === 'completed' ? { output: result.output } : { error: result.error?.message ?? 'Tool execution failed.' }),
           })

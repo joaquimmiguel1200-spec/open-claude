@@ -38,3 +38,9 @@ input:focus,select:focus,textarea:focus,.card form input:focus{border-color:var(
 .brand-loader{width:22px;height:22px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:brand-spin .8s linear infinite}
 @keyframes brand-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Wordmark placement across marketing and workspace shells */
+.claude-brand{display:inline-flex;align-items:center;gap:8px;letter-spacing:-.045em;color:var(--text)}
+.claude-brand::before,.chat.card>a:first-child::before{content:"";display:inline-block;width:27px;height:27px;flex:0 0 27px;background:url('/open-claude-mark.svg') center/contain no-repeat;vertical-align:middle}
+.claude-status{display:none!important}
+.chat.card>a:first-child{display:inline-flex;align-items:center;gap:8px}

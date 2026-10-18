@@ -97,6 +97,7 @@ O aplicativo inclui um cliente MCP para Streamable HTTP e uma página em `/mcp` 
 ## Documentação
 
 - [Arquitetura](docs/ARCHITECTURE.md)
+- [Sistema de Marca e Design Tokens](docs/BRAND_SYSTEM.md)
 - [Uso](docs/USAGE.md)
 - [AI Router](docs/AI_ROUTER.md)
 - [Code Agent](docs/CODE_AGENT.md)

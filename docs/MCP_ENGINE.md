@@ -1,41 +1,48 @@
-# MCP integration status — Open Claude
+# MCP integration — implementation and deployment
 
-## Verified status
+## What is implemented
 
-The repository has an MCP-related database table (`mcp_connections`) and UI/configuration references, but the source paths inspected for this review did not establish a complete, testable MCP client runtime or a server registry endpoint. Therefore **do not treat MCP as production-ready or claim that official MCP servers are installed** based only on this document.
+Open Claude includes a server-side MCP client for the Streamable HTTP transport, an authenticated `/api/mcp` route, and a `/mcp` management/testing screen. It negotiates protocol version `2025-03-26`, performs `initialize`, sends `notifications/initialized`, discovers tools with `tools/list`, and invokes read-only tools with `tools/call`.
 
-This page is a plan and security contract for implementing and validating MCP, not proof of implementation.
+The first release deliberately blocks tools that do not declare `annotations.readOnlyHint=true`. Tool execution is limited by per-user rate limiting, a 12-second request timeout, a 1 MB server response cap and a 20 KB returned tool output cap. Server URLs and bearer tokens are read only from server-side environment variables.
 
-## Target architecture
+## Configure a server
 
-```text
-Chat / Code / Cowork
-  -> server-side tool registry
-  -> authorization and approval checks
-  -> MCP client / transport adapter
-  -> explicitly configured external MCP server
+Set `MCP_SERVERS_JSON` in the Vercel project environment. Example:
+
+```json
+[
+  {
+    "id": "example",
+    "name": "Example MCP server",
+    "url": "https://mcp.example.com/mcp",
+    "tokenEnv": "EXAMPLE_MCP_TOKEN",
+    "enabled": true
+  }
+]
 ```
 
-## Requirements before enabling an MCP server
+Store the actual token in a separate server-only environment variable named by `tokenEnv`. Never put tokens inside `MCP_SERVERS_JSON`, `.env.example`, the browser, or a committed file. URLs must use HTTPS in production. After setting environment variables, redeploy the project and visit `/mcp` while signed in.
 
-- Implement and test the MCP initialization handshake and negotiated protocol version.
-- Implement the required JSON-RPC operations for tools; add resources and prompts only when supported and tested.
-- Support documented transports deliberately; do not claim stdio, Streamable HTTP, or legacy SSE unless an adapter exists and passes integration tests.
-- Store server credentials only in protected server-side storage; never send secrets to the browser.
-- Enforce per-user/per-project authorization and explicit confirmation for writes, deletion, shell execution, external messages, and other consequential actions.
-- Apply timeouts, cancellation, request/output limits, audit events, and safe error handling.
-- Treat tool descriptions, prompts, resources, and results as untrusted input.
-- Add mocked protocol tests and at least one integration test against a reviewed server before marking the connector enabled.
+## Scope and limitations
+
+- Only Streamable HTTP is implemented here. Local `stdio` servers and legacy SSE transport are not supported by this client.
+- The current version supports discovery and read-only tool invocation. Tools without an explicit read-only annotation are blocked even if a caller asks to confirm.
+- MCP resources, prompts, OAuth-based per-server authorization, server registry administration, and durable audit storage for every tool invocation are not yet implemented.
+- An integration is not considered enabled merely because it appears in an upstream repository. Configure and test each server separately.
+- MCP is a protocol, not a single fixed catalogue of "Anthropic MCPs". Servers are maintained by different parties and may have independent licenses, risks, credentials and network access.
+
+## Security checks before enabling connectors
+
+Review the server's source, license, permissions, network destinations, authentication model and tool schemas. Treat descriptions, arguments and outputs as untrusted data. Keep tokens server-side, restrict each server to the minimum required credentials, and test with non-production data first.
+
+## Validation status
+
+A passing production integration test requires at least one configured MCP endpoint and credentials. If `MCP_SERVERS_JSON` is absent, `/mcp` reports that setup is required. Do not claim a live connector is working until a real read-only tool has passed an end-to-end check.
 
 ## Official references
 
 - [Model Context Protocol specification](https://modelcontextprotocol.io/)
-- [Official MCP servers repository](https://github.com/modelcontextprotocol/servers)
+- [MCP servers repository](https://github.com/modelcontextprotocol/servers)
 - [Anthropic documentation](https://docs.anthropic.com/)
-- [Anthropic announcement about MCP](https://www.anthropic.com/news/model-context-protocol)
-
-These references do not mean that every server is maintained by Anthropic or automatically available to this application. Evaluate each server's maintainer, license, security posture, credentials, network access, and compatibility separately.
-
-## Completion criteria
-
-MCP is only considered delivered when source implementation, user-facing configuration, permissions, secrets handling, tests, and production smoke checks are all present. A database table or documentation page alone does not satisfy these criteria.
+- [Anthropic MCP announcement](https://www.anthropic.com/news/model-context-protocol)

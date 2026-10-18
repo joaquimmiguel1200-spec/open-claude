@@ -47,7 +47,40 @@ export default function AgentsPage() {
   const [visibleCount, setVisibleCount] = useState(40)
   useEffect(() => {
     try { const saved = window.localStorage.getItem('open-claude-enabled-agents'); if (saved) setEnabled(JSON.parse(saved)) } catch {}
-    ;(async () => { const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),15000);try { const response = await fetch('/api/agents/catalog', { cache: 'no-store', signal:controller.signal }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Falha ao atualizar o catálogo'); const remote=Array.isArray(data.agents)?data.agents:[];if(remote.length){const merged=[...FALLBACK_AGENTS,...remote.filter((agent:Agent)=>!FALLBACK_AGENTS.some(builtin=>builtin.id===agent.id))];setAgents(merged)}setSources(Array.isArray(data.sources)&&data.sources.length?data.sources:INITIAL_SOURCES);setError('') } catch { setAgents(INITIAL_AGENTS);setSources(INITIAL_SOURCES);setError('A API não respondeu; exibindo os 535 agentes da lista versionada incluída no sistema.') } finally {clearTimeout(timer);setLoading(false)} })()
+    ;(async () => {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 15000)
+      try {
+        const response = await fetch('/api/agents/catalog', { cache: 'no-store', signal: controller.signal })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Falha ao atualizar o catálogo')
+        const remote = Array.isArray(data.agents) ? data.agents as Agent[] : []
+        // The versioned manifest is the reliable baseline. The API may temporarily
+        // return only built-ins or an incomplete upstream response; never let that
+        // erase the 515 bundled external entries.
+        const byId = new Map<string, Agent>()
+        for (const agent of [...FALLBACK_AGENTS, ...VERSIONED_REMOTE_AGENTS, ...remote]) {
+          if (agent && typeof agent.id === 'string' && agent.id) byId.set(agent.id, agent)
+        }
+        setAgents(Array.from(byId.values()))
+        const sourceByName = new Map<string, Source>()
+        for (const source of [...INITIAL_SOURCES, ...(Array.isArray(data.sources) ? data.sources : [])]) {
+          if (source && typeof source.repository === 'string') {
+            const existing = sourceByName.get(source.repository)
+            sourceByName.set(source.repository, { ...source, count: Math.max(source.count || 0, existing?.count || 0), available: source.available !== false || existing?.available === true })
+          }
+        }
+        setSources(Array.from(sourceByName.values()))
+        setError(remote.length ? '' : 'Catálogo local carregado; a API não trouxe agentes adicionais. Todos os agentes versionados continuam disponíveis.')
+      } catch {
+        setAgents(INITIAL_AGENTS)
+        setSources(INITIAL_SOURCES)
+        setError('A API está indisponível; o catálogo versionado permanece disponível.')
+      } finally {
+        clearTimeout(timer)
+        setLoading(false)
+      }
+    })()
   }, [])
   const categories = useMemo(() => ['Todas', ...Array.from(new Set(agents.map(a => a.category))).sort()], [agents])
   const filtered = useMemo(() => agents.filter(a => (category === 'Todas' || a.category === category) && (a.name + ' ' + a.category + ' ' + a.description + ' ' + a.repository).toLowerCase().includes(query.toLowerCase())), [agents, category, query])

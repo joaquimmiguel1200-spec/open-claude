@@ -92,7 +92,11 @@ export async function POST(request: Request) {
     const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })
     return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider, testCommand: testCommand||null }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Não foi possível executar o Code Agent.'
-    return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })
+    const detail = error instanceof Error ? error.message : ''
+    console.error('[code] request failed', { message: detail.slice(0, 300) })
+    const unauthenticated = detail === 'UNAUTHENTICATED'
+    const noProvider = /NO_PROVIDER|no provider|not configured/i.test(detail)
+    const message = unauthenticated ? 'Não autenticado.' : noProvider ? 'Nenhum provedor de IA configurado. Adicione e teste uma API em Configurações.' : 'Não foi possível executar o Code Agent. Confira a API, a conexão GitHub e os arquivos autorizados.'
+    return NextResponse.json({ error: message }, { status: unauthenticated ? 401 : 500, headers: { 'Cache-Control': 'no-store' } })
   }
 }

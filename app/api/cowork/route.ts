@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     if (body?.projectId) { const project = await supabase.from('projects').select('id').eq('id', body.projectId).eq('owner_id', user.id).maybeSingle(); if (!project.data) return NextResponse.json({error:'Projeto não encontrado ou não autorizado.'},{status:403}) }
     const providers = await userAIProviders(supabase, user.id)
     const agent = createAgentRuntime({ providers })
-    const runtime = createCoworkRuntime({ taskRunner: createAgentTaskRunner(agent), maxConcurrency: 3 })
+    const runtime = createCoworkRuntime({ taskRunner: createAgentTaskRunner(agent, { supabase }), maxConcurrency: 3 })
     const controller = new AbortController()
     request.signal.addEventListener('abort', () => controller.abort(), { once: true })
     if (request.signal.aborted) controller.abort()

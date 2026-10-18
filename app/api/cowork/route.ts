@@ -70,7 +70,11 @@ export async function POST(request: Request) {
       error: result.error,
     }, { status: result.status === 'completed' ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Não foi possível executar o Cowork.'
-    return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })
+    const detail = error instanceof Error ? error.message : ''
+    console.error('[cowork] request failed', { message: detail.slice(0, 300) })
+    const unauthenticated = detail === 'UNAUTHENTICATED'
+    const noProvider = /NO_PROVIDER|no provider|not configured/i.test(detail)
+    const message = unauthenticated ? 'Não autenticado.' : noProvider ? 'Nenhum provedor de IA configurado. Adicione e teste uma API em Configurações.' : 'Não foi possível executar o Cowork. Confira a API e as integrações autorizadas.'
+    return NextResponse.json({ error: message }, { status: unauthenticated ? 401 : 500, headers: { 'Cache-Control': 'no-store' } })
   }
 }

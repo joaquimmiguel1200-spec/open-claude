@@ -7,6 +7,10 @@ type CoworkTaskRunnerOptions = { supabase?: SupabaseClient }
 
 type RequestedTool = { name: string; input: Record<string, unknown> }
 
+function wantsArtifactSave(goal: string) {
+  return /\b(salve no workspace|salvar no workspace|guarde no workspace|crie um artefato|criar um artefato|salve como documento|salvar como documento|crie um documento no workspace|criar um documento no workspace)\b/i.test(goal)
+}
+
 function requestedReadTools(goal: string, taskTitle: string): RequestedTool[] {
   if (taskTitle.toLowerCase() !== 'execute') return []
   const tools: RequestedTool[] = []
@@ -25,6 +29,8 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
   return {
     async run(task: CoworkTask, input: CoworkRunInput, signal) {
       let goal = `${task.objective}\nOverall goal: ${input.goal}`
+      const saveArtifact = task.title.toLowerCase() === 'finalize' && wantsArtifactSave(input.goal)
+      if (saveArtifact) goal += '\\nReturn the complete deliverable in Markdown with a clear title. It will be saved as a workspace artifact.'
       const requested = requestedReadTools(input.goal, task.title)
       if (requested.length) {
         const engine = createDefaultToolEngine()
@@ -149,7 +155,42 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
         signal,
       })
       if (result.status !== 'completed') throw new Error(result.error ?? `Agent task ${task.title} did not complete.`)
-      return result.response?.content ?? result
+      const content = result.response?.content ?? (typeof result === 'string' ? result : JSON.stringify(result))
+      if (saveArtifact && options.supabase && content.length > 0 && content.length <= 50_000) {
+        const title = input.goal.replace(/\b(salve no workspace|salvar no workspace|guarde no workspace|crie um artefato|criar um artefato|salve como documento|salvar como documento|crie um documento no workspace|criar um documento no workspace)\b/ig, '').replace(/^[\s:,-]+|[\s:,-]+$/g, '').slice(0, 180) || 'Resultado Cowork'
+        try {
+          const { data: artifact, error: artifactError } = await options.supabase.from('artifacts').insert({
+            owner_id: input.userId,
+            project_id: input.projectId ?? null,
+            chat_id: input.chatId ?? null,
+            name: title,
+            artifact_type: 'markdown',
+            language: 'markdown',
+            mime_type: 'text/markdown',
+            metadata: { source: 'cowork', task: task.title },
+          }).select('id').single()
+          if (artifactError || !artifact) throw new Error('Artifact metadata insert failed.')
+          const { data: version, error: versionError } = await options.supabase.from('artifact_versions').insert({
+            artifact_id: artifact.id,
+            version_number: 1,
+            content,
+            mime_type: 'text/markdown',
+            language: 'markdown',
+            metadata: { source: 'cowork' },
+            created_by: input.userId,
+          }).select('id').single()
+          if (versionError || !version) {
+            await options.supabase.from('artifacts').delete().eq('id', artifact.id).eq('owner_id', input.userId)
+            throw new Error('Artifact content insert failed.')
+          }
+          const { error: updateError } = await options.supabase.from('artifacts').update({ current_version_id: version.id }).eq('id', artifact.id).eq('owner_id', input.userId)
+          if (updateError) throw new Error('Artifact version link failed.')
+          return content + '\\n\\nArtefato salvo no workspace: ' + title
+        } catch {
+          return content + '\\n\\nAviso: o conteúdo foi gerado, mas não consegui salvá-lo como artefato. Confira as permissões de armazenamento.'
+        }
+      }
+      return content
     },
   }
 }

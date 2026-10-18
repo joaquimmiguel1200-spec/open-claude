@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     const detail = error instanceof Error ? error.message : ''
     console.error('[cowork] request failed', { message: detail.slice(0, 300) })
     const unauthenticated = detail === 'UNAUTHENTICATED'
-    const noProvider = /NO_PROVIDER|no provider|not configured/i.test(detail)
+    const noProvider = /NO_PROVIDER|no provider|not configured|no ai model is available/i.test(detail)
     const message = unauthenticated ? 'Não autenticado.' : noProvider ? 'Nenhum provedor de IA configurado. Adicione e teste uma API em Configurações.' : 'Não foi possível executar o Cowork. Confira a API e as integrações autorizadas.'
     return NextResponse.json({ error: message }, { status: unauthenticated ? 401 : 500, headers: { 'Cache-Control': 'no-store' } })
   }

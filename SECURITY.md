@@ -29,6 +29,14 @@ Não publique tokens, dados pessoais, provas de conceito destrutivas ou detalhes
 - [ ] Dependências, typecheck, build e testes automatizados verificados.
 - [ ] Plano de resposta a incidentes, retenção e exclusão de dados documentados.
 
+## MCP e integrações externas
+
+- Servidores MCP só são carregados a partir de configuração administrativa server-side (`MCP_SERVERS_JSON`); tokens ficam em variáveis de ambiente separadas.
+- O cliente atual usa Streamable HTTP, negociação de versão do protocolo, timeout e limites de tamanho. Ferramentas só podem ser executadas quando declaram `annotations.readOnlyHint=true`.
+- Ferramentas sem indicação de somente leitura, `stdio`, recursos/prompts MCP e autenticação OAuth individual por servidor não estão habilitados nesta versão.
+- Revise origem, licença, permissões, esquema e destinos de rede de cada servidor antes de configurá-lo. Não trate uma listagem de terceiros como endosso da Anthropic.
+- A tela `/mcp` e a presença de código não comprovam que um conector externo está operacional: execute um teste de ponta a ponta com dados não sensíveis antes de liberar para usuários.
+
 ## Operação e divulgação
 
 Mantenha dependências atualizadas, rode os testes antes de releases e rotacione credenciais após qualquer suspeita de exposição. A correção deve ser revisada e publicada sem expor detalhes de exploração desnecessários.

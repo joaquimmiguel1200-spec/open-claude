@@ -30,7 +30,7 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
     async run(task: CoworkTask, input: CoworkRunInput, signal) {
       let goal = `${task.objective}\nOverall goal: ${input.goal}`
       const saveArtifact = task.title.toLowerCase() === 'finalize' && wantsArtifactSave(input.goal)
-      if (saveArtifact) goal += '\\nReturn the complete deliverable in Markdown with a clear title. It will be saved as a workspace artifact.'
+      if (saveArtifact) goal += '\nReturn the complete deliverable in Markdown with a clear title. It will be saved as a workspace artifact.'
       const requested = requestedReadTools(input.goal, task.title)
       if (requested.length) {
         const engine = createDefaultToolEngine()
@@ -184,10 +184,14 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
             throw new Error('Artifact content insert failed.')
           }
           const { error: updateError } = await options.supabase.from('artifacts').update({ current_version_id: version.id }).eq('id', artifact.id).eq('owner_id', input.userId)
-          if (updateError) throw new Error('Artifact version link failed.')
-          return content + '\\n\\nArtefato salvo no workspace: ' + title
+          if (updateError) {
+            await options.supabase.from('artifact_versions').delete().eq('id', version.id)
+            await options.supabase.from('artifacts').delete().eq('id', artifact.id).eq('owner_id', input.userId)
+            throw new Error('Artifact version link failed.')
+          }
+          return content + '\n\nArtefato salvo no workspace: ' + title
         } catch {
-          return content + '\\n\\nAviso: o conteúdo foi gerado, mas não consegui salvá-lo como artefato. Confira as permissões de armazenamento.'
+          return content + '\n\nAviso: o conteúdo foi gerado, mas não consegui salvá-lo como artefato. Confira as permissões de armazenamento.'
         }
       }
       return content

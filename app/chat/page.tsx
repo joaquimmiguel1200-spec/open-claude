@@ -13,7 +13,7 @@ const menu: MenuItem[] = [
   { id: 'settings', label: 'APIs & Configurações', icon: '⚙' },
 ]
 const modeCopy: Record<Mode, { label: string; hint: string; icon: string }> = {
-  chat: { label: 'Chat', hint: 'Conversa, pesquisa e criação', icon: '◌' }, code: { label: 'Code', hint: 'Construção, revisão e debugging', icon: '</>' }, cowork: { label: 'Cowork', hint: 'Delegue trabalho em etapas', icon: '⌁' },
+  chat: { label: 'Chat', hint: 'Conversa, pesquisa e criação', icon: '◌' }, code: { label: 'Code', hint: 'Construção, revisão e debugging', icon: '</>' }, cowork: { label: 'Cowork', hint: 'Planeje, consulte o workspace e salve artefatos', icon: '⌁' },
 }
 
 export default function ChatPage() {

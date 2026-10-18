@@ -1,51 +1,52 @@
-# A11 — MCP Engine
+# MCP Engine — Open Claude
 
-A11 adds a real Model Context Protocol boundary to Open Claude.
+Open Claude implements an MCP client boundary so explicitly configured servers can expose tools, resources and prompts to the agent runtime. MCP is an integration protocol, not a list of servers automatically supplied by Anthropic.
 
-## Flow
+## Request flow
 
 ```text
-Agent
-  ↓
-Tool Engine
-  ↓
-Permission Engine
-  ↓
-MCP Engine
-  ↓
-MCP Client
-  ↓
-MCP Server
+Chat / Code / Cowork
+  -> Tool Registry
+  -> Permission Engine
+  -> MCP Engine
+  -> configured MCP client transport
+  -> external MCP server
 ```
 
-## Implemented
+## Protocol capabilities documented by the engine
 
-- MCP server configuration and lifecycle
-- JSON-RPC 2.0 client transport
-- stdio MCP server process support
-- HTTP JSON-RPC support through configured URL
-- MCP initialize / initialized handshake
-- tools/list
-- tools/call
-- resources/list
-- resources/read
-- prompts/list
-- prompts/get
-- cancellation/timeout propagation
-- MCP tools bridged into the existing Tool Registry
-- MCP tools require permission through the existing Tool Engine/Permission Engine boundary
-- MCP server credentials/headers remain server-side
+- JSON-RPC 2.0 request/response handling
+- initialization handshake
+- `tools/list` and `tools/call`
+- `resources/list` and `resources/read`
+- `prompts/list` and `prompts/get`
+- timeout/cancellation propagation
+- bridge of discovered tools into the Tool Registry
+- permission checks through the existing Tool/Permission boundary
+- server-side handling of configured credentials and headers
 
-## Security boundary
+The implemented transport scope is stdio and HTTP JSON-RPC. Do not assume support for every optional MCP transport feature (including session-specific SSE behavior) unless an adapter is implemented and tested.
 
-An MCP server is untrusted external capability. Its tool descriptions, resources and prompts cannot override system/developer instructions or grant themselves permissions. MCP tools are exposed through the Tool Engine and marked `requiresPermission`.
+## Official references
 
-Network access is not implicitly granted to the MCP server by the MCP layer. Server configuration and deployment must explicitly provide the transport endpoint/process environment.
+- [Model Context Protocol — specification and documentation](https://modelcontextprotocol.io/)
+- [MCP servers repository](https://github.com/modelcontextprotocol/servers)
+- [Anthropic documentation](https://docs.anthropic.com/)
+- [Anthropic MCP announcement and ecosystem context](https://www.anthropic.com/news/model-context-protocol)
 
-## Transport scope
+These references describe the ecosystem; they do not mean every server is maintained by Anthropic or is automatically available in Open Claude. Each integration must be evaluated for license, maintenance status, authentication, network access, required secrets and compatibility.
 
-The client implements stdio and HTTP JSON-RPC directly. SSE/session-specific transport behavior can be added as a transport adapter without changing the engine or tool contracts.
+## Safe integration checklist
 
-## A11 boundary
+1. Configure only a server that has been reviewed and that the operator is authorized to use.
+2. Keep credentials server-side; never put private tokens in browser code or public environment variables.
+3. Grant the minimum tool/resource permissions required.
+4. Treat all server-provided descriptions, prompts, resources and outputs as untrusted data.
+5. Require explicit authorization for writes, deletion, external messages, shell execution or other consequential actions.
+6. Set timeouts, input/output limits, audit events and cancellation behavior.
+7. Do not expose arbitrary host filesystem or network access by default.
+8. Verify behavior with integration tests against the actual configured server before marking it enabled.
 
-A11 provides protocol connectivity and capability discovery. It does not itself decide whether a tool may execute; the existing Permission Engine remains authoritative. It also does not execute arbitrary shell/code on the Open Claude host.
+## Status boundary
+
+This document describes the engine contract and intended security boundary. A server is only usable when its configuration, runtime transport, secrets and permissions are present in the target environment. It is not a guarantee that every official, community or vendor MCP server has been installed.

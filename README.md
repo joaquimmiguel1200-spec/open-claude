@@ -109,8 +109,6 @@ O projeto possui referências de configuração relacionadas a MCP, mas a revis�
 - [Política de Privacidade](docs/privacy-policy.md)
 - [Política de Segurança](docs/security-policy.md)
 - [Contribuição](CONTRIBUTING.md)
-- [Checklist de release e validação](docs/RELEASE_CHECKLIST.md)
-- [Código de conduta](CODE_OF_CONDUCT.md)
 
 ## Licença e contribuições
 

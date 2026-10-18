@@ -2,7 +2,7 @@
 import {FormEvent,useState} from 'react'
 import {useRouter} from 'next/navigation'
 import Link from 'next/link'
-import SocialAuthButtons from '@/app/social-auth-buttons'
+import SocialAuthButtons from '../social-auth-buttons'
 export default function SignupPage(){
  const router=useRouter();const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [accepted,setAccepted]=useState(false);const [error,setError]=useState('');const [message,setMessage]=useState('');const [loading,setLoading]=useState(false)
  async function acceptPolicies(){const results=await Promise.all(['terms','privacy','security','cookies','acceptable_use','ai'].map(policyType=>fetch('/api/policy-acceptance',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({policyType})})));if(results.some(response=>!response.ok))throw new Error('Não foi possível registrar todos os aceites. Entre novamente para concluir.');localStorage.removeItem('open-claude-policies-pending')}

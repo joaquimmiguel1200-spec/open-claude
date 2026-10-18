@@ -10,7 +10,7 @@ export default function HomePage() {
   return (
     <main className="landing shell">
       <nav className="nav landing-nav">
-        <Link className="brand" href="/">OPEN CLAUDE</Link>
+        <Link className="brand" href="/">Open Claude</Link>
         <div className="nav-links">
           <Link href="#features">Recursos</Link>
           <Link href="/agents">535 agentes</Link>
@@ -24,7 +24,7 @@ export default function HomePage() {
       <section className="hero landing-hero">
         <div className="hero-orbit" aria-hidden="true" />
         <div className="hero-content">
-          <p className="kicker">PERSONAL AI WORKSPACE · OPEN CLAUDE</p>
+          <p className="kicker">UM ESPAÇO PARA PENSAR, CRIAR E CONSTRUIR</p>
           <h1>De uma ideia<br /><span>ao trabalho real.</span></h1>
           <p className="hero-copy">Converse, planeje código e organize tarefas em um workspace. Conecte seu provedor de IA para habilitar geração real; Code e Cowork também dependem das integrações e permissões necessárias.</p>
           <div className="actions">
@@ -36,7 +36,7 @@ export default function HomePage() {
           <div className="window-bar"><span /><span /><span /><small>Open Claude · Workspace</small></div>
           <div className="window-body">
             <aside><b>OPEN CLAUDE</b><em>+ Novo chat</em><label>WORKSPACE</label><i>Chats</i><i>Projects</i><i>Files</i><i>Canvas</i><i>Skills</i></aside>
-            <div className="window-chat"><small>NEW CONVERSATION</small><h2>O que vamos construir hoje?</h2><p>Think, create, code, and turn answers into real work.</p><div className="window-composer">Ask anything… <span>＋</span></div></div>
+            <div className="window-chat"><small>NEW CONVERSATION</small><h2>O que vamos construir hoje?</h2><p>Pense com clareza. Crie com intenção. Construa com contexto.</p><div className="window-composer">O que vamos construir hoje? <span>＋</span></div></div>
             <div className="window-canvas"><small>CANVAS · LIVE</small><h3>Product brief</h3><p>Um artefato editável conectado à conversa.</p><div className="mini-card">Contexto contínuo</div><div className="mini-card">Estrutura e ações</div></div>
           </div>
         </div>

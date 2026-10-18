@@ -38,7 +38,7 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
                 .eq('owner_id', context.userId)
                 .order('updated_at', { ascending: false })
                 .limit(20)
-              if (error) throw new Error('Could not read the user's projects.')
+              if (error) throw new Error("Could not read the user projects.")
               return { count: data?.length ?? 0, projects: data ?? [] }
             },
           })
@@ -58,7 +58,7 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
                 .eq('owner_id', context.userId)
                 .order('updated_at', { ascending: false })
                 .limit(10)
-              if (error) throw new Error('Could not read the user's recent chats.')
+              if (error) throw new Error("Could not read the user recent chats.")
               return { count: data?.length ?? 0, chats: data ?? [] }
             },
           })

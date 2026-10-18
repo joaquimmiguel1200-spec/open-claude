@@ -11,6 +11,7 @@ function requestedReadTools(goal: string, taskTitle: string) {
   if (/\b(que horas|hor[aá]rio atual|data de hoje|que dia é hoje|dia de hoje)\b/i.test(goal)) tools.push('current_time')
   if (/\b(meus projetos|lista de projetos|listar projetos|liste projetos|quais projetos|mostrar projetos|mostre projetos|projetos recentes)\b/i.test(goal)) tools.push('workspace.list_projects')
   if (/\b(minhas conversas|conversas recentes|chats recentes|hist[oó]rico de conversas|listar conversas|liste conversas|mostrar conversas|mostre conversas|quais conversas)\b/i.test(goal)) tools.push('workspace.recent_chats')
+  if (/\b(meus arquivos|arquivos do projeto|listar arquivos|liste arquivos|mostrar arquivos|mostre arquivos|quais arquivos|arquivos recentes)\b/i.test(goal)) tools.push('workspace.list_files')
   return [...new Set(tools)]
 }
 
@@ -40,6 +41,26 @@ export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRu
                 .limit(20)
               if (error) throw new Error("Could not read the user projects.")
               return { count: data?.length ?? 0, projects: data ?? [] }
+            },
+          })
+          engine.registry.register({
+            name: 'workspace.list_files',
+            description: 'List up to 50 files owned by the authenticated user, scoped to the active project when provided.',
+            inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+            requiresPermission: false,
+            dangerous: false,
+            timeoutMs: 8_000,
+            maxOutputChars: 12_000,
+          }, {
+            async execute(_input, context) {
+              if (!context.userId) throw new Error('Authenticated user context is required.')
+              const baseQuery = options.supabase!.from('files')
+                .select('id,name,folder_path,project_id,mime_type,size_bytes,updated_at')
+                .eq('owner_id', context.userId)
+              const scopedQuery = context.projectId ? baseQuery.eq('project_id', context.projectId) : baseQuery
+              const { data, error } = await scopedQuery.order('updated_at', { ascending: false }).limit(50)
+              if (error) throw new Error('Could not read the user files.')
+              return { count: data?.length ?? 0, files: data ?? [] }
             },
           })
           engine.registry.register({

@@ -1,5 +1,5 @@
 'use client'
-import {FormEvent,useState} from 'react'
+import {FormEvent,useEffect,useState} from 'react'
 import {useRouter} from 'next/navigation'
 import Link from 'next/link'
 import {createSupabaseBrowserClient} from '@/lib/supabase/browser'
@@ -12,6 +12,11 @@ export default function LoginPage(){
  const [loading,setLoading]=useState(false)
  const [resending,setResending]=useState(false)
  const [sent,setSent]=useState(false)
+
+ useEffect(()=>{
+  const params=new URLSearchParams(window.location.search)
+  if(params.get('error')==='confirmation')setError('O link de confirmação é inválido ou expirou. Solicite um novo envio e use o link mais recente.')
+ },[])
 
  async function submit(e:FormEvent){
   e.preventDefault();setError('');setSent(false);setLoading(true)

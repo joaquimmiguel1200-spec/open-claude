@@ -5,7 +5,6 @@ import { clientKey, rateLimit } from '@/lib/security/rate-limit'
 export const runtime='nodejs'
 async function exportAccount(userId:string){
  const {supabase}=await requireUser()
- const admin=createSupabaseAdminClient()
  const results=await Promise.all([
   supabase.from('profiles').select('id,display_name,avatar_url,preferences,created_at,updated_at').eq('id',userId).maybeSingle(),
   supabase.from('projects').select('*').eq('owner_id',userId),
@@ -27,7 +26,7 @@ async function exportAccount(userId:string){
   supabase.from('data_subject_requests').select('*').eq('user_id',userId),
   supabase.from('security_reports').select('*').eq('reporter_id',userId),
   supabase.from('security_alerts').select('*').eq('user_id',userId),
-  admin.from('subprocessor_deletion_jobs').select('*').eq('user_id',userId),
+  supabase.from('subprocessor_deletion_jobs').select('*').eq('user_id',userId),
   supabase.from('audit_logs').select('*').eq('user_id',userId).order('created_at',{ascending:false}).limit(5000),
   supabase.from('skills').select('*').eq('owner_id',userId),
   supabase.from('user_skills').select('*').eq('user_id',userId),
@@ -41,10 +40,10 @@ async function exportAccount(userId:string){
  return {exported_at:new Date().toISOString(),account:{id:userId,email:auth.user?.email??null},profile:profile.data,projects:projects.data??[],project_memberships:memberships.data??[],chats:chats.data??[],messages:messages.data??[],files:files.data??[],file_chunks:chunks,memories:memories.data??[],memory_items:memoryItems.data??[],conversation_summaries:summaries.data??[],mcp_connections:mcp.data??[],github_connections:github.data??[],cowork_sessions:cowork.data??[],permission_grants:grants.data??[],artifacts:artifacts.data??[],rag_chunks:ragChunks.data??[],privacy_consents:consents.data??[],policy_acceptances:policyAcceptances.data??[],data_subject_requests:dataRequests.data??[],security_reports:securityReports.data??[],security_alerts:securityAlerts.data??[],subprocessor_deletion_jobs:subprocessorJobs.data??[],audit_logs:audit.data??[],skills:skills.data??[],user_skills:userSkills.data??[],api_credentials:credentials.data??[]}
 }
 export async function GET(request:Request){
- try{const {user}=await requireUser();const rl=rateLimit(clientKey(request,user.id),3,60000);if(!rl.allowed)return NextResponse.json({error:'Muitas exportações. Tente novamente em instantes.'},{status:429});const data=await exportAccount(user.id);const admin=createSupabaseAdminClient();await admin.from('security_events').insert({user_id:user.id,event_type:'data_export',severity:'info',metadata:{source:'account'}});return new NextResponse(JSON.stringify(data,null,2),{headers:{'content-type':'application/json; charset=utf-8','content-disposition':'attachment; filename="open-claude-data.json"','cache-control':'no-store'}})}
- catch(e){const m=e instanceof Error?e.message:'Não foi possível exportar seus dados.';return NextResponse.json({error:m},{status:m==='UNAUTHENTICATED'?401:500})}
+ try{const {user,supabase}=await requireUser();const rl=rateLimit(clientKey(request,user.id),3,60000);if(!rl.allowed)return NextResponse.json({error:'Muitas exportações. Tente novamente em instantes.'},{status:429});await supabase.from('data_subject_requests').insert({user_id:user.id,request_type:'access',status:'completed',details:{source:'account_export',format:'json'}});const data=await exportAccount(user.id);return new NextResponse(JSON.stringify(data,null,2),{headers:{'content-type':'application/json; charset=utf-8','content-disposition':'attachment; filename="open-claude-data.json"','cache-control':'no-store'}})}
+ catch(e){const m=e instanceof Error?e.message:'';const status=m==='UNAUTHENTICATED'?401:503;return NextResponse.json({error:m==='UNAUTHENTICATED'?'Não autenticado.':'A exportação de dados não pôde ser concluída. Verifique a conexão e as permissões do banco.'},{status})}
 }
 export async function DELETE(request:Request){
  try{const {user,supabase}=await requireUser();const rl=rateLimit(clientKey(request,user.id),2,60000);if(!rl.allowed)return NextResponse.json({error:'Muitas tentativas. Tente novamente em instantes.'},{status:429});const body=await request.json().catch(()=>({}));if(body?.confirm!==user.email)return NextResponse.json({error:'Confirmação inválida. Digite seu e-mail exatamente.'},{status:400});const admin=createSupabaseAdminClient();await admin.from('security_events').insert({user_id:user.id,event_type:'account_deletion',severity:'warning',metadata:{source:'account'}});const {error:signOutError}=await supabase.auth.signOut({scope:'global'});if(signOutError)throw new Error('Não foi possível revogar as sessões antes da exclusão.');const {data:fileRows}=await admin.from('files').select('storage_bucket,storage_path').eq('owner_id',user.id);const paths=(fileRows??[]).map((x:any)=>x.storage_path).filter(Boolean);if(paths.length)await admin.storage.from('open-claude-files').remove(paths);const {data:objects}=await admin.storage.from('open-claude-files').list(user.id,{limit:1000});if(objects?.length)await admin.storage.from('open-claude-files').remove(objects.map(x=>user.id+'/'+x.name));const {error}=await admin.auth.admin.deleteUser(user.id);if(error)throw new Error(error.message);return NextResponse.json({ok:true})}
- catch(e){const m=e instanceof Error?e.message:'Não foi possível excluir sua conta.';return NextResponse.json({error:m},{status:m==='UNAUTHENTICATED'?401:500})}
+ catch(e){const m=e instanceof Error?e.message:'';if(m==='UNAUTHENTICATED')return NextResponse.json({error:'Não autenticado.'},{status:401});if(m.includes('SUPABASE_SERVICE_ROLE_KEY is not configured.'))return NextResponse.json({error:'A exclusão definitiva ainda não está habilitada no servidor. O responsável precisa configurar a chave administrativa do Supabase antes de tentar novamente.'},{status:503});return NextResponse.json({error:'Não foi possível excluir a conta. Nenhuma conclusão de exclusão deve ser presumida.'},{status:500})}
 }

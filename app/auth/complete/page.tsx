@@ -56,7 +56,7 @@ export default function AuthCompletePage() {
       <Link href="/" className="muted">← Open Claude</Link>
       <p className="eyebrow" style={{ marginTop: 26 }}>Proteção da conta</p>
       <h1>Quase pronto</h1>
-      {loading ? <p className="muted">Verificando os aceites da sua conta…</p> : required.length === 0 && !error ? <p className="muted">Tudo certo. Redirecionando…</p> : <>
+      {loading ? <p className="muted">Verificando os aceites da sua conta…</p> : required.length === 0 && !error ? <p className="muted">Tudo certo. Redirecionando…</p> : error && required.length === 0 ? <p role="alert" style={{ color: '#ff8c9b' }}>{error} Recarregue a página para tentar novamente.</p> : <>
         <p className="muted" style={{ lineHeight: 1.7 }}>Antes de continuar, confirme os documentos que ainda não foram aceitos ou cuja versão foi atualizada.</p>
         <div style={{ display: 'grid', gap: 12, margin: '20px 0' }}>{required.map(type => <Link key={type} href={policyLinks[type]} className="button secondary" style={{ justifyContent: 'space-between' }}>{policyLabels[type]} <span>↗</span></Link>)}</div>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, lineHeight: 1.6 }}><input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} /><span>Li e aceito os documentos listados acima e entendo como o Open Claude trata meus dados e o uso de IA.</span></label>

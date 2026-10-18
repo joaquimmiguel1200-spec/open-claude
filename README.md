@@ -27,7 +27,7 @@ Workspace independente de IA para Chat, Code, Projects, Artifacts e Cowork, com 
 | **Cowork** | Planejamento e execução de tarefas multi-etapas com checkpoints e cancelamento |
 | **Projects & Files** | Organização de trabalho e arquivos |
 | **AI Router** | Abstração de provider/modelo, streaming, timeout, retry e fallback conforme configuração |
-| **MCP** | Descoberta e chamada de ferramentas MCP por transportes implementados e configurados |
+| **MCP** | Configuração relacionada a MCP presente; cliente/runtime ainda não validado como pronto para produção |
 | **Segurança** | Supabase Auth, RLS, validação de entradas, limites e permissões |
 
 Os recursos dependem de configuração, credenciais, permissões e disponibilidade dos serviços externos. Uma integração documentada não significa que esteja habilitada na implantação.

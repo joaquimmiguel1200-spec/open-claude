@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: { default: 'Open Claude — Seu agente de IA pessoal', template: '%s — Open Claude' },
   description: 'Um agente de IA pessoal para conversar, trabalhar em projetos, usar ferramentas, arquivos, memória, GitHub, MCP e Cowork.',
   applicationName: 'Open Claude',
+  themeColor: '#171513',
+  icons: { icon: '/icon.svg', apple: '/open-claude-mark.svg' },
   openGraph: { title: 'Open Claude', description: 'Seu agente de IA pessoal.', type: 'website', images: ['/og-image.svg'] },
   twitter: { card: 'summary_large_image', title: 'Open Claude', description: 'Seu agente de IA pessoal.', images: ['/og-image.svg'] },
   robots: { index: true, follow: true },

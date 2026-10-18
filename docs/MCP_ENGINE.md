@@ -2,7 +2,7 @@
 
 ## What is implemented
 
-Open Claude includes a server-side MCP client for the Streamable HTTP transport, an authenticated `/api/mcp` route, and a `/mcp` management/testing screen. It negotiates protocol version `2025-03-26`, performs `initialize`, sends `notifications/initialized`, discovers tools with `tools/list`, and invokes read-only tools with `tools/call`.
+Open Claude includes a server-side MCP client for the Streamable HTTP transport, an authenticated `/api/mcp` route, and a `/mcp` management/testing screen. It negotiates the current protocol version (`2026-07-28`) with compatibility fallback to `2025-11-25` and `2025-03-26`, performs `initialize`, sends `notifications/initialized`, discovers tools with `tools/list`, and invokes read-only tools with `tools/call`.
 
 The first release deliberately blocks tools that do not declare `annotations.readOnlyHint=true`. Tool execution is limited by per-user rate limiting, a 12-second request timeout, a 1 MB server response cap and a 20 KB returned tool output cap. Server URLs and bearer tokens are read only from server-side environment variables.
 

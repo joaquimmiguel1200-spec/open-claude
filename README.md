@@ -80,6 +80,10 @@ A interface oferece entrada por Google, Microsoft e GitHub, além de e-mail e se
 
 O projeto possui referências de configuração relacionadas a MCP, mas a revisão do código não confirmou um cliente MCP completo e testado em produção. Consulte [MCP integration status](docs/MCP_ENGINE.md): a documentação explicita o estado real e os critérios de entrega, sem declarar integrações que ainda não foram verificadas. Não há um único pacote que habilite automaticamente todos os servidores da Anthropic. Consulte a [especificação MCP](https://modelcontextprotocol.io/) e a [documentação Anthropic](https://docs.anthropic.com/).
 
+## MCP e conexões
+
+O aplicativo inclui um cliente MCP para Streamable HTTP e uma página em `/mcp` para descobrir e testar ferramentas. Configure `MCP_SERVERS_JSON` nas variáveis server-side da Vercel; credenciais devem ficar em variáveis separadas e nunca no navegador ou no Git. Por segurança, a primeira versão só executa ferramentas marcadas como somente leitura. Consulte [docs/MCP_ENGINE.md](docs/MCP_ENGINE.md) e [docs/MCP_CONFIGURATION_EXAMPLE.json](docs/MCP_CONFIGURATION_EXAMPLE.json). Cada servidor precisa ser revisado e configurado separadamente; o protocolo não equivale a um catálogo de servidores oficiais da Anthropic.
+
 ## Segurança
 
 - Leia [SECURITY.md](SECURITY.md) e a [Política de Segurança](docs/security-policy.md).

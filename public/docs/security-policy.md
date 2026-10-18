@@ -27,7 +27,7 @@ Dados de usuários devem ser isolados por autorização e RLS. Views e funções
 Tabelas expostas devem usar RLS com políticas específicas. UPDATE deve possuir USING e WITH CHECK quando necessário. Uploads devem validar tamanho, tipo, nome, proprietário e acesso. Buckets privados devem permanecer protegidos por políticas de Storage.
 
 ## 9. Criptografia e segredos
-HTTPS protege dados em trânsito. Dados armazenados devem usar criptografia fornecida pela infraestrutura e controles adicionais quando apropriados. Chaves e tokens devem permanecer em secret manager/variáveis de ambiente e ser rotacionados quando comprometidos.
+HTTPS protege dados em trânsito. O código de credenciais de provedores implementa criptografia autenticada AES-256-GCM no servidor, com envelope versionado e chave mestra em APP_ENCRYPTION_KEY (32 bytes em base64 ou hexadecimal); a API nunca retorna a chave em texto aberto. A gravação de credenciais falha de forma segura se a chave estiver ausente ou inválida. Dados armazenados também dependem da criptografia e dos controles fornecidos pela infraestrutura. Chaves e tokens devem permanecer em secret manager/variáveis de ambiente e ser rotacionados quando comprometidos.
 
 ## 10. Code, Cowork e sandbox
 Code só deve escrever em caminhos autorizados e, quando usado com testes, deve validar alterações em sandbox antes de commit. A sandbox deve aplicar filesystem restrito, capabilities removidas, limites de CPU/memória/processos/tempo e rede desativada por padrão. Cowork deve respeitar permissões das ferramentas subjacentes e não deve receber privilégios implícitos.

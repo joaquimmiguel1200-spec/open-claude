@@ -9,3 +9,32 @@
 /* OAuth controls */
 .oauth-actions{display:grid;grid-template-columns:1fr;gap:10px;margin:22px 0 16px}.oauth-actions .button{width:100%;min-height:46px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025));color:var(--text);border-color:rgba(255,255,255,.13);box-shadow:inset 0 1px rgba(255,255,255,.04);border-radius:12px}.oauth-actions .button:hover:not(:disabled){background:rgba(184,168,255,.09);border-color:rgba(184,168,255,.45)}.oauth-divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin:16px 0}.oauth-divider:before,.oauth-divider:after{content:"";height:1px;flex:1;background:var(--line)}.card form{display:grid;gap:14px}.card form label{display:grid;gap:7px;color:var(--muted);font-size:13px}.card form input:not([type=checkbox]){width:100%;min-height:44px;border:1px solid var(--line);background:#09090c;color:var(--text);padding:11px 12px;border-radius:11px;outline:none}.card form input:focus{border-color:var(--accent-strong);box-shadow:0 0 0 3px rgba(143,125,255,.13)}.card form .button{width:100%;margin-top:4px}
 @media(max-width:600px){.shell{padding:16px}.card{padding:20px}.oauth-actions{gap:8px}}
+
+
+/* Open Claude brand system v1 — warm editorial, Claude-inspired but original */
+:root{color-scheme:dark;--bg:#171513;--surface:#211e1b;--surface-2:#292521;--surface-3:#322c27;--line:#3a332e;--text:#f5f0e8;--muted:#b8aea3;--accent:#e98a68;--accent-strong:#f3a083;--brand-peach:#f3b69c;--brand-ink:#171513;--focus-ring:rgba(233,138,104,.28)}
+html,body{background:var(--bg);color:var(--text)}
+body:before{background:radial-gradient(circle at 50% -14%,rgba(233,138,104,.105),transparent 35%),radial-gradient(circle at 100% 18%,rgba(243,182,156,.045),transparent 28%)}
+.brand,.sidebar-brand{letter-spacing:-.045em}
+.brand::before,.sidebar-brand::before{content:"";display:inline-block;width:27px;height:27px;flex:0 0 27px;margin-right:9px;vertical-align:middle;background:url('/open-claude-mark.svg') center/contain no-repeat}
+.brand{display:inline-flex;align-items:center;gap:0;color:var(--text)}
+.sidebar-brand{gap:0}
+.button{background:var(--text);color:var(--brand-ink);border-color:rgba(245,240,232,.65);box-shadow:0 10px 30px rgba(0,0,0,.16)}
+.button.secondary{background:var(--surface-2);color:var(--text);border-color:var(--line);box-shadow:none}
+.button.glow{background:var(--accent);color:#201713;border-color:rgba(233,138,104,.8);box-shadow:0 10px 34px rgba(233,138,104,.13)}
+.accent,.active .nav-glyph,.artifact-kicker{color:var(--accent)}
+.status-dot{background:var(--accent);box-shadow:0 0 12px rgba(233,138,104,.4)}
+input:focus,select:focus,textarea:focus,.card form input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus-ring)}
+.oauth-actions .button:hover:not(:disabled){background:rgba(233,138,104,.09);border-color:rgba(233,138,104,.5)}
+.hero-orbit{border-color:rgba(233,138,104,.11);box-shadow:0 0 120px rgba(233,138,104,.055),inset 0 0 80px rgba(255,255,255,.018)}
+.hero-window{box-shadow:0 40px 120px rgba(0,0,0,.42),0 0 100px rgba(233,138,104,.045)}
+.window-composer span{color:var(--accent)}
+.workspace-sidebar{background:var(--surface);border-color:var(--line)}
+.workspace-nav button.active{background:rgba(233,138,104,.085)}
+.avatar{background:rgba(233,138,104,.13);color:var(--brand-peach)}
+.suggestions button:hover{border-color:rgba(233,138,104,.45)}
+.oauth-actions .button{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.01));color:var(--text);border-color:var(--line)}
+/* Brand-led loading indicator; honor reduced-motion preferences. */
+.brand-loader{width:22px;height:22px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:brand-spin .8s linear infinite}
+@keyframes brand-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

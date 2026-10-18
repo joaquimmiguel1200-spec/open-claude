@@ -2,7 +2,7 @@ import 'server-only'
 
 export type McpServerConfig = { id: string; name: string; url: string; tokenEnv?: string; enabled?: boolean }
 type JsonRpc = { jsonrpc: '2.0'; id?: number; method: string; params?: Record<string, unknown> }
-const PROTOCOL_VERSION = '2025-03-26'
+const PROTOCOL_VERSIONS = ['2026-07-28', '2025-11-25', '2025-03-26'] as const
 const MAX_RESPONSE_BYTES = 1_000_000
 
 export function configuredMcpServers(): McpServerConfig[] {
@@ -59,11 +59,24 @@ async function rpc(server: McpServerConfig, request: JsonRpc, sessionId?: string
 }
 
 async function initialize(server: McpServerConfig) {
-  const initialized = await rpc(server, { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: 'Open Claude', version: '1.0.0' } } })
-  if (initialized.result?.error) throw new Error(String(initialized.result.error.message || 'MCP initialization failed.'))
+  let initialized: Awaited<ReturnType<typeof rpc>> | null = null
+  let lastError: unknown = null
+  for (const requestedVersion of PROTOCOL_VERSIONS) {
+    try {
+      const attempt = await rpc(server, { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: requestedVersion, capabilities: {}, clientInfo: { name: 'Open Claude', version: '1.0.0' } } }, undefined, requestedVersion)
+      if (attempt.result?.error) {
+        lastError = new Error(String(attempt.result.error.message || 'MCP initialization failed.'))
+        continue
+      }
+      initialized = attempt
+      break
+    } catch (error) { lastError = error }
+  }
+  if (!initialized) throw (lastError instanceof Error ? lastError : new Error('MCP initialization failed for supported protocol versions.'))
   const sessionId = initialized.sessionId
-  await rpc(server, { jsonrpc: '2.0', method: 'notifications/initialized' }, sessionId, initialized.protocolVersion)
-  return { sessionId, protocolVersion: initialized.protocolVersion }
+  const negotiatedVersion = initialized.result?.result?.protocolVersion || initialized.protocolVersion
+  await rpc(server, { jsonrpc: '2.0', method: 'notifications/initialized' }, sessionId, negotiatedVersion)
+  return { sessionId, protocolVersion: negotiatedVersion }
 }
 
 export async function listMcpTools(server: McpServerConfig) {

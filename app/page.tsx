@@ -13,10 +13,11 @@ export default function HomePage() {
         <Link className="brand" href="/">OPEN CLAUDE</Link>
         <div className="nav-links">
           <Link href="#features">Recursos</Link>
-          <Link href="#canvas">Canvas</Link>
+          <Link href="/agents">535 agentes</Link>
+          <Link href="#workspace-modes">Chat · Code · Cowork</Link>
           <Link href="/privacy">Privacidade</Link>
           <Link className="button secondary compact" href="/login">Entrar</Link>
-          <Link className="button glow compact" href="/signup">Criar conta</Link>
+          <Link className="button glow compact" href="/signup">Criar conta gratuita</Link>
         </div>
       </nav>
 
@@ -27,7 +28,7 @@ export default function HomePage() {
           <h1>De uma ideia<br /><span>ao trabalho real.</span></h1>
           <p className="hero-copy">Converse, planeje código e organize tarefas em um workspace. Conecte seu provedor de IA para habilitar geração real; Code e Cowork também dependem das integrações e permissões necessárias.</p>
           <div className="actions">
-            <Link className="button glow" href="/signup">Criar conta ↗</Link>
+            <Link className="button glow" href="/signup">Criar conta gratuita ↗</Link>
             <Link className="button secondary" href="/login">Entrar no workspace</Link>
           </div>
         </div>
@@ -43,6 +44,12 @@ export default function HomePage() {
 
       <section className="feature-grid" id="features">
         {features.map(([title, description]) => <article className="feature" key={title}><span className="feature-index">0{features.findIndex(x => x[0] === title) + 1}</span><h3>{title}</h3><p>{description}</p></article>)}
+      </section>
+
+      <section id="workspace-modes" className="feature-grid" aria-label="Modos do workspace">
+        <article className="feature"><span className="feature-index">01</span><h3>Chat</h3><p>Conversas com streaming e histórico. A geração depende de um provedor de IA configurado e válido.</p><Link href="/chat">Abrir Chat ↗</Link></article>
+        <article className="feature"><span className="feature-index">02</span><h3>Code</h3><p>Analisa arquivos autorizados, propõe alterações e exige comando de teste antes de aplicar mudanças no GitHub. Requer conexão GitHub e provedor de IA.</p><Link href="/settings/github">Conectar GitHub ↗</Link></article>
+        <article className="feature"><span className="feature-index">03</span><h3>Cowork</h3><p>Divide tarefas em etapas e executa-as pelo runtime disponível. Requer provedor de IA; ações externas dependem das integrações e permissões conectadas.</p><Link href="/chat">Abrir workspace ↗</Link></article>
       </section>
 
       <footer className="footer">Open Claude · Segurança, privacidade e controle por padrão. · <Link href="/privacy">Privacidade</Link> · <Link href="/terms">Termos</Link> · <Link href="/security">Segurança</Link> · <Link href="/cookies">Cookies</Link> · <Link href="/refunds">Reembolso</Link> · <Link href="/ai-policy">IA</Link></footer>

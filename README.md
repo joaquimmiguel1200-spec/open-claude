@@ -1,60 +1,48 @@
 # Open Claude
 
-Open Claude é um workspace de IA pessoal inspirado em fluxos modernos de Chat, Code, Projects, Artifacts e Cowork. O projeto combina conversação, memória, RAG, Skills, ferramentas, MCP, GitHub, execução isolada e automação multi-etapas.
+Workspace independente de IA para Chat, Code, Projects, Artifacts e Cowork, com infraestrutura para memória, RAG, Skills, ferramentas, MCP, integração com GitHub e execução isolada.
 
-> **Aviso de escopo:** Open Claude é um projeto independente e não é afiliado à Anthropic. A interface e os nomes de modos são implementações próprias inspiradas em padrões de produto conhecidos.
+> **Aviso:** Open Claude não é afiliado, patrocinado ou endossado pela Anthropic. “Claude” e outras marcas pertencem aos respectivos titulares. Este projeto implementa fluxos próprios inspirados em padrões de ferramentas de IA.
 
-## Navegação
+[![CI](https://github.com/joaquimmiguel1200-spec/open-claude/actions/workflows/ci.yml/badge.svg)](https://github.com/joaquimmiguel1200-spec/open-claude/actions/workflows/ci.yml) ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 
-- [Visão geral e arquitetura](docs/ARCHITECTURE.md)
-- [Como instalar e executar](docs/USAGE.md)
-- [AI Router e modelos](docs/AI_ROUTER.md)
-- [Code Agent](docs/CODE_AGENT.md)
-- [Cowork Engine](docs/COWORK_ENGINE.md)
-- [Agent Engine](docs/AGENT_ENGINE.md)
-- [Projects, Files e Storage](docs/PROJECTS_FILES.md)
-- [Artifacts](docs/ARTIFACTS.md)
-- [Skills](docs/SKILLS_ENGINE.md)
-- [Tools](docs/TOOL_ENGINE.md)
-- [MCP](docs/MCP_ENGINE.md)
-- [Sandbox](docs/SANDBOX_ENGINE.md)
-- [Memória](docs/MEMORY_ENGINE.md)
-- [RAG](docs/RAG.md)
-- [Política de Privacidade](docs/privacy-policy.md)
-- [Política de Segurança](docs/security-policy.md)
-- [Contribuição](CONTRIBUTING.md)
-- [Licença](LICENSE)
+## Índice
 
-## Funcionalidades
+- [Recursos](#recursos)
+- [Arquitetura](#arquitetura)
+- [Começar](#começar)
+- [Configuração](#configuração)
+- [Autenticação OAuth](#autenticação-oauth)
+- [MCPs e integrações](#mcps-e-integrações)
+- [Segurança](#segurança)
+- [Documentação](#documentação)
+- [Licença e contribuições](#licença-e-contribuições)
 
-### Chat
-Conversação com streaming, histórico persistido, Projects, instruções personalizadas, memória, RAG, Skills e seleção explícita de modelo.
+## Recursos
 
-### Code
-Modo orientado a desenvolvimento: planejamento, contexto de código, revisão, geração de alterações, validação e integração com GitHub quando o ambiente possui as credenciais e permissões necessárias. O Code Agent existente usa validação de caminhos, controle por SHA, limites de arquivos e loop de testes em sandbox.
+| Área | Objetivo |
+|---|---|
+| **Chat** | Conversas, histórico, seleção de modelos, instruções e contexto |
+| **Code** | Fluxo de desenvolvimento com validação de alterações e integração GitHub quando configurada |
+| **Cowork** | Planejamento e execução de tarefas multi-etapas com checkpoints e cancelamento |
+| **Projects & Files** | Organização de trabalho e arquivos |
+| **AI Router** | Abstração de provider/modelo, streaming, timeout, retry e fallback conforme configuração |
+| **MCP** | Descoberta e chamada de ferramentas MCP por transportes implementados e configurados |
+| **Segurança** | Supabase Auth, RLS, validação de entradas, limites e permissões |
 
-### Cowork
-Modo de delegação multi-etapas. O Cowork Engine cria um plano, respeita dependências, executa tarefas com concorrência limitada, emite eventos, cria checkpoints e permite pause/resume/cancel.
+Os recursos dependem de configuração, credenciais, permissões e disponibilidade dos serviços externos. Uma integração documentada não significa que esteja habilitada na implantação.
 
-### Modelos
-O AI Router possui abstração de provider/model, seleção por estratégia, fallback, timeout, retry, streaming, usage, custo e erros normalizados. Providers compatíveis com OpenAI/Anthropic e OmniRoute/OpenRouter podem ser configurados.
+## Arquitetura
 
-Para OmniRoute/OpenRouter, o modelo gratuito usado como padrão é `nvidia/nemotron-3-ultra-550b-a55b:free`. Outros modelos podem ser expostos por `AI_MODELS` ou cadastrados em **Settings → APIs**.
+- **Frontend e rotas:** Next.js + React + TypeScript
+- **Identidade e dados:** Supabase Auth, PostgreSQL, RLS e Storage
+- **IA:** AI Router com provider e modelo configuráveis
+- **Integrações:** GitHub Agent, MCP e ferramentas autorizadas
+- **Deploy:** Vercel
 
-## Stack
+## Começar
 
-- Frontend: Next.js 16 + React + TypeScript
-- Backend: Supabase
-- Banco: PostgreSQL + RLS
-- Auth: Supabase Auth com sessão SSR
-- Storage: Supabase Storage privado
-- IA: AI Router / OmniRoute
-- RAG: pgvector + embeddings
-- Git: GitHub Agent
-- Skills: `SKILL.md`
-- Segurança: Zod, rate limit, RLS, Permission Engine, sandbox, headers, secret scanning e dependency audit
-
-## Instalação
+Requisitos: Node.js 22 e npm.
 
 ```bash
 git clone https://github.com/joaquimmiguel1200-spec/open-claude.git
@@ -64,52 +52,65 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Acesse `http://localhost:3000`.
+Abra http://localhost:3000. Antes de usar serviços reais, preencha as variáveis necessárias no arquivo local. Nunca envie `.env.local` ao Git.
 
-## Configuração mínima
+## Configuração
 
-Configure no `.env.local`:
+Variáveis comuns (a lista efetiva depende dos módulos habilitados):
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 AI_PROVIDER=omniroute
 OMNIROUTE_ENABLED=true
 OMNIROUTE_BASE_URL=https://openrouter.ai/api/v1
-OMNIROUTE_API_KEY=...
+OMNIROUTE_API_KEY=
 AI_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free
 AI_ROUTING_STRATEGY=free
 ```
 
-Opcionalmente, exponha vários modelos no mesmo provider:
+Configure secrets em variáveis de ambiente protegidas no ambiente de deploy. Nunca use prefixo `NEXT_PUBLIC_` em chaves privadas, tokens de provider, chaves service-role ou chaves de criptografia.
 
-```env
-AI_MODELS=nvidia/nemotron-3-ultra-550b-a55b:free,openai/gpt-oss-120b:free,google/gemini-2.5-flash:free
-```
+## Autenticação OAuth
 
-Os nomes precisam ser modelos aceitos pelo endpoint configurado. O Open Claude não presume que todo modelo listado pelo provider tenha as mesmas capacidades.
+A interface oferece entrada por Google, Microsoft e GitHub, além de e-mail e senha. Para que os botões funcionem em produção, cada provider precisa ser habilitado no painel Supabase Auth, com Client ID/Secret válidos e URLs de callback permitidas para o domínio local e de produção. O callback configurado na aplicação é `/auth/callback`. A presença dos botões, sozinha, não configura credenciais de terceiros.
 
-## Produção
+## MCPs e integrações
 
-O alvo recomendado é Vercel para o Next.js e Supabase para Auth/Database/Storage. Configure todas as variáveis de produção e `NEXT_PUBLIC_SITE_URL` com o domínio definitivo.
-
-O CI executa instalação, diagnóstico TypeScript, build de produção e verificações de segurança. O deploy só deve ser considerado concluído quando o deployment estiver `READY`.
+O motor MCP documentado suporta descoberta e execução de ferramentas e operações de resources/prompts nos transportes descritos em [MCP Engine](docs/MCP_ENGINE.md). Cada servidor externo precisa ser configurado explicitamente e receber apenas as credenciais e permissões necessárias. Não há um único pacote público que habilite automaticamente “todos os MCPs da Anthropic”: os servidores disponíveis dependem do produto, do provider, das licenças e da configuração. Consulte a documentação oficial do [Model Context Protocol](https://modelcontextprotocol.io/) e a [documentação da Anthropic](https://docs.anthropic.com/) antes de habilitar integrações.
 
 ## Segurança
 
-- Chaves secretas e service-role ficam no servidor.
-- RLS é a fronteira de autorização do banco.
-- Inputs são validados com Zod.
-- Uploads têm limites de tamanho/MIME/nome.
-- Sessões usam SSR e cookies seguros.
-- HTTPS/HSTS e headers de segurança são aplicados em produção.
-- Conteúdo de RAG, Skills, MCP e ferramentas é tratado como não confiável.
-- Execução de código deve passar por sandbox isolado.
+- Leia [SECURITY.md](SECURITY.md) e a [Política de Segurança](docs/security-policy.md).
+- Use credenciais de menor privilégio e mantenha secrets no servidor.
+- Revise RLS e políticas de Storage para todas as tabelas/buckets com dados de usuários.
+- Trate arquivos, prompts, resultados de ferramentas e respostas MCP como dados não confiáveis.
+- Execute código apenas em sandbox isolado e com permissões explícitas.
+- Não declare conformidade ou segurança total sem testes e revisão independentes.
+- Reporte vulnerabilidades de forma privada ao mantenedor; não publique exploits ou dados pessoais em issues.
 
-## Licença
+## Documentação
 
-Este projeto está licenciado sob a **MIT License**. O arquivo legal completo está em [`LICENSE`](LICENSE). A presença de um arquivo de licença na raiz é a forma recomendada pelo GitHub para tornar a licença detectável e mostrar suas condições aos usuários.
+- [Arquitetura](docs/ARCHITECTURE.md)
+- [Uso](docs/USAGE.md)
+- [AI Router](docs/AI_ROUTER.md)
+- [Code Agent](docs/CODE_AGENT.md)
+- [Cowork Engine](docs/COWORK_ENGINE.md)
+- [Agent Engine](docs/AGENT_ENGINE.md)
+- [MCP Engine](docs/MCP_ENGINE.md)
+- [Sandbox](docs/SANDBOX_ENGINE.md)
+- [Skills](docs/SKILLS_ENGINE.md)
+- [Tools](docs/TOOL_ENGINE.md)
+- [Projects e Files](docs/PROJECTS_FILES.md)
+- [Artifacts](docs/ARTIFACTS.md)
+- [Memória](docs/MEMORY_ENGINE.md)
+- [RAG](docs/RAG.md)
+- [Política de Privacidade](docs/privacy-policy.md)
+- [Política de Segurança](docs/security-policy.md)
+- [Contribuição](CONTRIBUTING.md)
 
-## Contribuição
+## Licença e contribuições
 
-Leia [`CONTRIBUTING.md`](CONTRIBUTING.md) antes de abrir uma alteração. Para vulnerabilidades, use [`SECURITY.md`](SECURITY.md) em vez de publicar detalhes de exploração em uma issue.
+Distribuído sob a licença [MIT](LICENSE). Consulte [CONTRIBUTING.md](CONTRIBUTING.md) antes de contribuir. Ao enviar contribuições, certifique-se de que tem direito de licenciar o conteúdo proposto e que não incluiu secrets ou dados pessoais.
+

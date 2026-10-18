@@ -66,7 +66,7 @@ AI_PROVIDER=omniroute
 OMNIROUTE_ENABLED=true
 OMNIROUTE_BASE_URL=https://openrouter.ai/api/v1
 OMNIROUTE_API_KEY=
-AI_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free
+AI_MODEL=nvidia/nemotron-3-ultra-550b-a55b-20260604:free
 AI_ROUTING_STRATEGY=free
 ```
 
@@ -78,7 +78,7 @@ A interface oferece entrada por Google, Microsoft e GitHub, além de e-mail e se
 
 ## MCPs e integrações
 
-O motor MCP documentado suporta descoberta e execução de ferramentas e operações de resources/prompts nos transportes descritos em [MCP Engine](docs/MCP_ENGINE.md). Cada servidor externo precisa ser configurado explicitamente e receber apenas as credenciais e permissões necessárias. Não há um único pacote público que habilite automaticamente “todos os MCPs da Anthropic”: os servidores disponíveis dependem do produto, do provider, das licenças e da configuração. Consulte a documentação oficial do [Model Context Protocol](https://modelcontextprotocol.io/) e a [documentação da Anthropic](https://docs.anthropic.com/) antes de habilitar integrações.
+O projeto possui referências de configuração relacionadas a MCP, mas a revisão do código não confirmou um cliente MCP completo e testado em produção. Consulte [MCP integration status](docs/MCP_ENGINE.md): a documentação explicita o estado real e os critérios de entrega, sem declarar integrações que ainda não foram verificadas. Não há um único pacote que habilite automaticamente todos os servidores da Anthropic. Consulte a [especificação MCP](https://modelcontextprotocol.io/) e a [documentação Anthropic](https://docs.anthropic.com/).
 
 ## Segurança
 
@@ -109,6 +109,8 @@ O motor MCP documentado suporta descoberta e execução de ferramentas e operaç
 - [Política de Privacidade](docs/privacy-policy.md)
 - [Política de Segurança](docs/security-policy.md)
 - [Contribuição](CONTRIBUTING.md)
+- [Checklist de release e validação](docs/RELEASE_CHECKLIST.md)
+- [Código de conduta](CODE_OF_CONDUCT.md)
 
 ## Licença e contribuições
 

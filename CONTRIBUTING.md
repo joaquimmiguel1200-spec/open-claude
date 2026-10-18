@@ -43,3 +43,23 @@ Use mensagens curtas e descritivas, por exemplo:
 ## Pull requests
 
 Inclua o problema, a solução, passos de teste, mudanças de banco/migrations e riscos de segurança. Não faça merge de mudanças de engine sem typecheck e build de produção passando.
+
+
+## Checklist de release
+
+Antes de cada deploy de produção, confirme com evidências:
+
+- [ ] Typecheck e build passam no CI.
+- [ ] Nenhuma credencial ou dado pessoal entrou no diff.
+- [ ] Cadastro, confirmação de e-mail, login, recuperação e logout foram testados.
+- [ ] Google, Microsoft e GitHub OAuth foram testados ponta a ponta no ambiente configurado.
+- [ ] MFA e revogação de sessões foram testados, inclusive isolamento entre usuários.
+- [ ] RLS e Storage foram testados com duas contas de teste e acessos negativos.
+- [ ] Exportação, exclusão, retenção e restauração de backup foram verificadas.
+- [ ] AI Router, MCP, Code e Cowork foram testados com credenciais e serviços reais de teste.
+- [ ] Logs de build e erros de runtime foram revisados.
+- [ ] URL canônica, callbacks OAuth e deploy apontam para o commit esperado.
+
+## Código de conduta
+
+Seja respeitoso, construtivo e inclusivo. Não publique dados pessoais, credenciais, ameaças, assédio ou ataques pessoais. Relate vulnerabilidades por um canal privado ao mantenedor conforme `SECURITY.md`. Mantenedores podem moderar conteúdo que viole essas regras.

@@ -36,3 +36,12 @@ Mantenha dependências atualizadas, rode os testes antes de releases e rotacione
 ## English summary
 
 Open Claude welcomes responsible security reports. Do not disclose secrets or personal data publicly. Report the affected version, impact, prerequisites and minimal reproduction privately to the repository maintainer. Security documentation is not a certification; production controls must be independently verified.
+
+
+## Achados atuais do Supabase (2026-10-18)
+
+- O advisor de segurança informa que a proteção contra senhas vazadas está desativada. Habilite a proteção contra senhas comprometidas nas configurações de Authentication do projeto Supabase e teste cadastro/troca de senha antes de produção: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- O advisor sinaliza duas funções `SECURITY DEFINER` de gestão de sessão (`list_my_sessions` e `revoke_my_session`). A revisão das definições confirmou filtro por `auth.uid()` em ambas e grants de execução a `authenticated`, sem grant direto a `anon`. Mantenha os testes de isolamento e reavalie qualquer mudança de definição/grants; o aviso de linter permanece até a configuração ser alterada ou a exceção ser tratada formalmente.
+- A consulta de catálogo confirmou RLS habilitado em todas as tabelas do schema `public` encontradas. Isso não substitui testes de autorização com dois usuários distintos nem auditoria de cada política.
+
+Esses itens são achados de revisão, não uma declaração de conformidade ou garantia de segurança.

@@ -1,52 +1,41 @@
-# MCP Engine — Open Claude
+# MCP integration status — Open Claude
 
-Open Claude implements an MCP client boundary so explicitly configured servers can expose tools, resources and prompts to the agent runtime. MCP is an integration protocol, not a list of servers automatically supplied by Anthropic.
+## Verified status
 
-## Request flow
+The repository has an MCP-related database table (`mcp_connections`) and UI/configuration references, but the source paths inspected for this review did not establish a complete, testable MCP client runtime or a server registry endpoint. Therefore **do not treat MCP as production-ready or claim that official MCP servers are installed** based only on this document.
+
+This page is a plan and security contract for implementing and validating MCP, not proof of implementation.
+
+## Target architecture
 
 ```text
 Chat / Code / Cowork
-  -> Tool Registry
-  -> Permission Engine
-  -> MCP Engine
-  -> configured MCP client transport
-  -> external MCP server
+  -> server-side tool registry
+  -> authorization and approval checks
+  -> MCP client / transport adapter
+  -> explicitly configured external MCP server
 ```
 
-## Protocol capabilities documented by the engine
+## Requirements before enabling an MCP server
 
-- JSON-RPC 2.0 request/response handling
-- initialization handshake
-- `tools/list` and `tools/call`
-- `resources/list` and `resources/read`
-- `prompts/list` and `prompts/get`
-- timeout/cancellation propagation
-- bridge of discovered tools into the Tool Registry
-- permission checks through the existing Tool/Permission boundary
-- server-side handling of configured credentials and headers
-
-The implemented transport scope is stdio and HTTP JSON-RPC. Do not assume support for every optional MCP transport feature (including session-specific SSE behavior) unless an adapter is implemented and tested.
+- Implement and test the MCP initialization handshake and negotiated protocol version.
+- Implement the required JSON-RPC operations for tools; add resources and prompts only when supported and tested.
+- Support documented transports deliberately; do not claim stdio, Streamable HTTP, or legacy SSE unless an adapter exists and passes integration tests.
+- Store server credentials only in protected server-side storage; never send secrets to the browser.
+- Enforce per-user/per-project authorization and explicit confirmation for writes, deletion, shell execution, external messages, and other consequential actions.
+- Apply timeouts, cancellation, request/output limits, audit events, and safe error handling.
+- Treat tool descriptions, prompts, resources, and results as untrusted input.
+- Add mocked protocol tests and at least one integration test against a reviewed server before marking the connector enabled.
 
 ## Official references
 
-- [Model Context Protocol — specification and documentation](https://modelcontextprotocol.io/)
-- [MCP servers repository](https://github.com/modelcontextprotocol/servers)
+- [Model Context Protocol specification](https://modelcontextprotocol.io/)
+- [Official MCP servers repository](https://github.com/modelcontextprotocol/servers)
 - [Anthropic documentation](https://docs.anthropic.com/)
-- [Anthropic MCP announcement and ecosystem context](https://www.anthropic.com/news/model-context-protocol)
+- [Anthropic announcement about MCP](https://www.anthropic.com/news/model-context-protocol)
 
-These references describe the ecosystem; they do not mean every server is maintained by Anthropic or is automatically available in Open Claude. Each integration must be evaluated for license, maintenance status, authentication, network access, required secrets and compatibility.
+These references do not mean that every server is maintained by Anthropic or automatically available to this application. Evaluate each server's maintainer, license, security posture, credentials, network access, and compatibility separately.
 
-## Safe integration checklist
+## Completion criteria
 
-1. Configure only a server that has been reviewed and that the operator is authorized to use.
-2. Keep credentials server-side; never put private tokens in browser code or public environment variables.
-3. Grant the minimum tool/resource permissions required.
-4. Treat all server-provided descriptions, prompts, resources and outputs as untrusted data.
-5. Require explicit authorization for writes, deletion, external messages, shell execution or other consequential actions.
-6. Set timeouts, input/output limits, audit events and cancellation behavior.
-7. Do not expose arbitrary host filesystem or network access by default.
-8. Verify behavior with integration tests against the actual configured server before marking it enabled.
-
-## Status boundary
-
-This document describes the engine contract and intended security boundary. A server is only usable when its configuration, runtime transport, secrets and permissions are present in the target environment. It is not a guarantee that every official, community or vendor MCP server has been installed.
+MCP is only considered delivered when source implementation, user-facing configuration, permissions, secrets handling, tests, and production smoke checks are all present. A database table or documentation page alone does not satisfy these criteria.

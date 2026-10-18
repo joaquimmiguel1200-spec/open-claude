@@ -65,6 +65,7 @@ export async function POST(request:Request){
       const r=await supabase.from('data_subject_requests').insert({user_id:user.id,request_type:type,details})
       if(r.error)throw new Error(r.error.message)
       if(type==='subprocessor'){
+        if(!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())return NextResponse.json({ok:true,queued:false,message:'Solicitação registrada. A fila automática de exclusão em subprocessadores ainda requer configuração administrativa; o pedido não foi marcado como concluído.'},{status:202})
         const admin=createSupabaseAdminClient()
         const jobs=[{user_id:user.id,processor:'supabase',reference:user.id,status:'queued',metadata:{source:'data_subject_request',requires_provider_confirmation:true}}]
         const {data:githubConnection}=await admin.from('github_connections').select('id').eq('user_id',user.id).limit(1).maybeSingle()

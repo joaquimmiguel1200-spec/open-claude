@@ -68,7 +68,7 @@ export default function ChatPage() {
     }catch(error){setAnswer(requestController.signal.aborted?'Geração interrompida.':'Erro de conexão.')}finally{setLoading(false);setActiveRequest(null)}
   }
   function chooseMode(next:Mode){setMode(next);setModeOpen(false);if(next!=='chat')setCanvasOpen(true)}
-function attachFile(){const input=document.createElement('input');input.type='file';input.multiple=true;input.onchange=()=>{const names=Array.from(input.files??[]).map(f=>f.name).slice(0,8);setAttachments(a=>[...a,...names].slice(0,8));setActionMenu(null)};input.click()}
+function attachFile(){const input=document.createElement('input');input.type='file';input.multiple=true;input.accept='.txt,.md,.json,.csv,.ts,.tsx,.js,.jsx,.py,.sql,.html,.css,.yaml,.yml,.xml,.toml,.sh';input.onchange=async()=>{const files=Array.from(input.files??[]).slice(0,8);const blocks:string[]=[];for(const file of files){try{const text=await file.text();blocks.push('[Arquivo anexado: '+file.name+']\\n'+text.slice(0,4500))}catch{blocks.push('[Não foi possível ler o arquivo: '+file.name+']')}}if(blocks.length){setMessage(current=>[current.trim(),...blocks].filter(Boolean).join('\\n\\n').slice(0,12000));setAttachments(a=>[...a,...files.map(f=>f.name)].slice(0,8))}setActionMenu(null)};input.click()}
 function toolAction(name:string){if(name==='time')setMessage(m=>m+'\nHorário atual: '+new Date().toLocaleString('pt-BR'));if(name==='canvas')setCanvasOpen(true);if(name==='settings')window.location.href='/settings';setActionMenu(null)}
 
 

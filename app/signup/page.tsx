@@ -40,7 +40,7 @@ export default function SignupPage(){
  }
 
  return <main className="shell"><div className="chat card">
-  <Link href="/" className="muted">← Open Claude</Link>
+  <Link href="/" className="auth-brand" aria-label="Voltar à página inicial"><img src="/open-claude-logo.svg" alt="Open Claude" width="190" height="54" /></Link>
   <h1>Criar conta</h1>
   <form onSubmit={submit}>
    <label>E-mail<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} maxLength={254}/></label>

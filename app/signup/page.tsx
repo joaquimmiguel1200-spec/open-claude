@@ -18,25 +18,10 @@ export default function SignupPage(){
   localStorage.removeItem('open-claude-policies-pending')
  }
 
- async function resendConfirmation(){
-  const normalizedEmail=email.trim()
-  if(!normalizedEmail){setError('Digite seu e-mail para solicitar a confirmação.');return}
-  setError('')
-  setResending(true)
-  try{
-   const response=await fetch('/api/auth/resend-confirmation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:normalizedEmail})})
-   const result=await response.json().catch(()=>({}))
-   if(!response.ok)throw new Error(result.error||'Não foi possível solicitar o envio agora.')
-   setResendMessage('Solicitação processada. Se houver uma conta pendente para esse endereço, confira sua caixa de entrada e spam.')
-  }catch(e){setError(e instanceof Error?e.message:'Não foi possível solicitar o envio agora.')}
-  finally{setResending(false)}
- }
-
  async function submit(e:FormEvent){
   e.preventDefault()
   setError('')
   setMessage('')
-  setResendMessage('')
   if(!accepted){setError('Você precisa aceitar os Termos, Privacidade, Segurança e regras de uso.');return}
   setLoading(true)
   try{
@@ -48,7 +33,7 @@ export default function SignupPage(){
     catch(e){localStorage.setItem('open-claude-policies-pending','1');setError(e instanceof Error?e.message:'Não foi possível registrar os aceites.')}
    }else{
     localStorage.setItem('open-claude-policies-pending','1')
-    setMessage('O cadastro foi recebido, mas a confirmação por e-mail ainda está ativada no projeto. Para testar sem verificação, desative “Confirm email” nas configurações de Auth do Supabase e tente novamente.')
+    setMessage('A confirmação por e-mail ainda está ativada no Supabase. Desative “Confirm email” nas configurações de Auth do projeto para testar o cadastro sem verificação.')
    }
   }catch{setError('Não foi possível criar a conta agora.')}
   finally{setLoading(false)}

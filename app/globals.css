@@ -89,3 +89,28 @@ input:focus,select:focus,textarea:focus,.card form input:focus{border-color:var(
 .pwa-install-banner{position:fixed;z-index:90;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #514239;border-radius:16px;background:#171513;color:#f5f0e8;box-shadow:0 16px 48px #0009}
 .pwa-install-banner>img{border-radius:9px;flex:none}.pwa-install-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px;font-size:12px}.pwa-install-copy strong{font-size:13px}.pwa-install-copy span{color:#b8aea3;line-height:1.4}.pwa-install-close{align-self:flex-start;background:transparent;border:0;color:#b8aea3;font-size:22px;padding:0 3px}
 @media(max-width:560px){.pwa-install-link{right:10px;bottom:10px}.pwa-install-banner{right:10px;bottom:10px;width:calc(100vw - 20px);padding:11px;gap:8px}}
+
+/* Match the actual workspace class names at tablet and phone breakpoints. */
+@media(max-width:1100px){
+ .claude-workspace{grid-template-columns:220px minmax(0,1fr)!important}
+ .claude-canvas{display:none!important}
+ .claude-main{min-width:0}
+ .conversation-area{width:calc(100% - 32px);max-width:860px}
+}
+@media(max-width:700px){
+ .claude-workspace{height:100dvh;min-height:0;grid-template-columns:minmax(0,1fr)!important;overflow:hidden}
+ .claude-sidebar{display:none!important}
+ .claude-main{width:100%;min-width:0}
+ .claude-main-header{padding:0 12px}
+ .main-scroll{padding-left:12px;padding-right:12px}
+ .conversation-area{width:100%;padding:24px 0 88px}
+ .claude-composer{width:calc(100% - 16px);max-width:none;margin-left:8px;margin-right:8px}
+ .composer-toolbar{gap:5px;flex-wrap:wrap}
+ .composer-left{max-width:100%;flex-wrap:wrap}
+ .model-picker{max-width:130px}
+ .mode-config{width:calc(100% - 16px);max-width:none}
+ .mode-config-grid{grid-template-columns:minmax(0,1fr)}
+ .welcome-area h1{font-size:clamp(27px,8vw,34px)}
+ .quick-prompts{grid-template-columns:minmax(0,1fr)}
+ .claude-canvas{display:none!important}
+}

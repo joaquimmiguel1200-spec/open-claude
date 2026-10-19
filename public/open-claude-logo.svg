@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 210" role="img" aria-label="Open Claude">
+<defs><linearGradient id="fire" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffbc55"/><stop offset=".48" stop-color="#ff7a2e"/><stop offset="1" stop-color="#b83c20"/></linearGradient><linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#74777b"/><stop offset=".48" stop-color="#282b30"/><stop offset="1" stop-color="#111316"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="2.5"/></filter></defs>
+<g transform="translate(105 100)">
+<circle r="79" fill="#101316" stroke="#070809" stroke-width="13"/><circle r="78" fill="none" stroke="url(#steel)" stroke-width="15"/><circle r="78" fill="none" stroke="#ff8138" stroke-width="4" stroke-dasharray="26 9 18 10 24 9 14 11 20 9" opacity=".95"/><circle r="70" fill="none" stroke="#ff7d35" stroke-width="4" stroke-dasharray="13 25" opacity=".38" filter="url(#glow)"/>
+<path d="M15-57A61 61 0 1 0 45 43A49 49 0 1 1 15-57Z" fill="url(#fire)"/><path d="M-18-55C12-44 31-17 31 12c0 28-19 52-45 60 37-2 66-33 66-71 0-26-14-48-35-61Z" fill="#17191d"/>
+<g fill="none" stroke="#ffc36b" stroke-width="1.7" opacity=".85"><path d="M-48-9l18 12 11-1 12 13m15-55v22l12 11M-28 42l14 12v17M28 28l-11 13 7 11"/></g>
+</g>
+<text x="218" y="118" font-family="Arial,Helvetica,sans-serif" font-size="68" font-weight="600" letter-spacing="-3" fill="url(#fire)" stroke="#672817" stroke-width="1">open-claude</text>
+<path d="M220 135H668" stroke="#ff8138" stroke-width="1" opacity=".32"/>
+</svg>

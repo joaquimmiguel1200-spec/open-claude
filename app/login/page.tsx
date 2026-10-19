@@ -28,7 +28,7 @@ export default function LoginPage(){
  }
 
  return <main className="shell"><div className="chat card">
-  <Link href="/" className="muted">← Open Claude</Link>
+  <Link href="/" className="auth-brand" aria-label="Voltar à página inicial"><img src="/open-claude-logo.svg" alt="Open Claude" width="190" height="54" /></Link>
   <h1>Entrar</h1>
   <p className="muted">Entre com seu e-mail e senha. Confirmação por e-mail será configurada posteriormente.</p>
   <form onSubmit={submit}>

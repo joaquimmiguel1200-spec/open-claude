@@ -11,8 +11,6 @@ export default function SignupPage(){
  const [error,setError]=useState('')
  const [message,setMessage]=useState('')
  const [loading,setLoading]=useState(false)
- const [resending,setResending]=useState(false)
- const [resendMessage,setResendMessage]=useState('')
 
  async function acceptPolicies(){
   const results=await Promise.all(['terms','privacy','security','cookies','acceptable_use','ai'].map(policyType=>fetch('/api/policy-acceptance',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({policyType})})))
@@ -24,7 +22,6 @@ export default function SignupPage(){
   const normalizedEmail=email.trim()
   if(!normalizedEmail){setError('Digite seu e-mail para solicitar a confirmação.');return}
   setError('')
-  setResendMessage('')
   setResending(true)
   try{
    const response=await fetch('/api/auth/resend-confirmation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:normalizedEmail})})
@@ -51,7 +48,7 @@ export default function SignupPage(){
     catch(e){localStorage.setItem('open-claude-policies-pending','1');setError(e instanceof Error?e.message:'Não foi possível registrar os aceites.')}
    }else{
     localStorage.setItem('open-claude-policies-pending','1')
-    setMessage('Cadastro recebido. Confirme o endereço de e-mail para ativar sua conta. Se a mensagem não chegar, verifique spam e solicite um novo envio abaixo.')
+    setMessage('O cadastro foi recebido, mas a confirmação por e-mail ainda está ativada no projeto. Para testar sem verificação, desative “Confirm email” nas configurações de Auth do Supabase e tente novamente.')
    }
   }catch{setError('Não foi possível criar a conta agora.')}
   finally{setLoading(false)}
@@ -66,10 +63,8 @@ export default function SignupPage(){
    <label style={{display:'flex',gap:8,alignItems:'flex-start'}}><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} required/><span>Li e aceito os <Link href="/terms">Termos</Link>, a <Link href="/privacy">Política de Privacidade</Link>, a <Link href="/security">Política de Segurança</Link> e as regras de uso.</span></label>
    {error&&<p role="alert">{error}</p>}
    {message&&<p role="status">{message}</p>}
-   {resendMessage&&<p role="status">{resendMessage}</p>}
-   <button className="button" disabled={loading||resending}>{loading?'Criando…':'Criar conta'}</button>
+   <button className="button" disabled={loading}>{loading?'Criando…':'Criar conta'}</button>
   </form>
-  {message&&<button type="button" className="button secondary" onClick={resendConfirmation} disabled={resending||loading}>{resending?'Solicitando…':'Reenviar confirmação de e-mail'}</button>}
   <p className="muted">Já tem conta? <Link href="/login">Entrar</Link></p>
  </div></main>
 }

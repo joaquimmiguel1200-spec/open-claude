@@ -10,7 +10,7 @@ export default function HomePage() {
   return (
     <main className="landing shell">
       <nav className="nav landing-nav">
-        <Link className="brand" href="/">Open Claude</Link>
+        <Link className="brand landing-brand" href="/"><img src="/icon.svg" alt="" width="34" height="34" /> <span>Open Claude</span></Link>
         <div className="nav-links">
           <Link href="#features">Recursos</Link>
           <Link href="/agents">535 agentes</Link>

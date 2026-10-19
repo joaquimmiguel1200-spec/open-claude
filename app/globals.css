@@ -84,3 +84,8 @@ input:focus,select:focus,textarea:focus,.card form input:focus{border-color:var(
 
 /* Shared Open Claude brand mark */
 .landing-brand{display:inline-flex;align-items:center;gap:10px}.landing-brand img{display:block;object-fit:contain}.brand-mark{width:34px;height:34px;object-fit:contain;flex:none}
+
+.pwa-install-link{position:fixed;z-index:80;right:16px;bottom:16px;border:1px solid #514239;background:#211e1b;color:#f5f0e8;border-radius:999px;padding:10px 15px;font:600 13px inherit;box-shadow:0 8px 28px #0006}
+.pwa-install-banner{position:fixed;z-index:90;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #514239;border-radius:16px;background:#171513;color:#f5f0e8;box-shadow:0 16px 48px #0009}
+.pwa-install-banner>img{border-radius:9px;flex:none}.pwa-install-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px;font-size:12px}.pwa-install-copy strong{font-size:13px}.pwa-install-copy span{color:#b8aea3;line-height:1.4}.pwa-install-close{align-self:flex-start;background:transparent;border:0;color:#b8aea3;font-size:22px;padding:0 3px}
+@media(max-width:560px){.pwa-install-link{right:10px;bottom:10px}.pwa-install-banner{right:10px;bottom:10px;width:calc(100vw - 20px);padding:11px;gap:8px}}

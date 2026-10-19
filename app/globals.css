@@ -81,3 +81,6 @@ input:focus,select:focus,textarea:focus,.card form input:focus{border-color:var(
  .modal-backdrop{padding:10px}
  .modal-card{padding:16px}
 }
+
+/* Shared Open Claude brand mark */
+.landing-brand{display:inline-flex;align-items:center;gap:10px}.landing-brand img{display:block;object-fit:contain}.brand-mark{width:34px;height:34px;object-fit:contain;flex:none}

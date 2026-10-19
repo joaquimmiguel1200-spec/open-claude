@@ -121,3 +121,5 @@ input:focus,select:focus,textarea:focus,.card form input:focus{border-color:var(
 .chat.card>a:first-child::before{background-image:url('/open-claude-mark.svg')}
 .pwa-install-banner>img{object-fit:contain;border-radius:8px}
 @media(max-width:560px){.landing-brand img{width:154px;max-height:44px}.claude-brand img{width:146px;max-height:40px}}
+
+.auth-brand{display:inline-flex;align-items:center;margin-bottom:10px;max-width:100%}.auth-brand::before{display:none!important}.auth-brand img{display:block;width:min(190px,100%);height:auto;max-height:56px;object-fit:contain;object-position:left center}

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   themeColor: '#171513',
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Open Claude' },
-  icons: { icon: '/icon.svg', apple: '/open-claude-mark.svg', shortcut: '/icon.svg' },
+  icons: { icon: '/icon.svg', apple: '/icon.svg', shortcut: '/icon.svg' },
   openGraph: { title: 'Open Claude', description: 'Seu agente de IA pessoal.', type: 'website', images: ['/og-image.svg'] },
   twitter: { card: 'summary_large_image', title: 'Open Claude', description: 'Seu agente de IA pessoal.', images: ['/og-image.svg'] },
   robots: { index: true, follow: true },

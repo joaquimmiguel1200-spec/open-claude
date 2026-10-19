@@ -44,3 +44,40 @@ input:focus,select:focus,textarea:focus,.card form input:focus{border-color:var(
 .claude-brand::before,.chat.card>a:first-child::before{content:"";display:inline-block;width:27px;height:27px;flex:0 0 27px;background:url('/open-claude-mark.svg') center/contain no-repeat;vertical-align:middle}
 .claude-status{display:none!important}
 .chat.card>a:first-child{display:inline-flex;align-items:center;gap:8px}
+
+/* Responsive workspace refinements */
+@media(max-width:900px){
+ .workspace-page,.claude-workspace{grid-template-columns:68px minmax(0,1fr)!important}
+ .workspace-sidebar{padding:14px 8px}
+ .sidebar-brand{justify-content:center}
+ .sidebar-brand .brand,.workspace-sidebar .sidebar-label,.workspace-sidebar .sidebar-section-title{display:none}
+ .claude-canvas{display:none!important}
+ .conversation-area{padding:38px 0 110px;width:calc(100% - 28px)}
+ .claude-composer{width:calc(100% - 20px)}
+ .mode-config{width:calc(100% - 20px)}
+ .welcome-area h1{font-size:clamp(29px,6vw,42px)}
+ .claude-main-header{padding:0 12px}
+}
+@media(max-width:560px){
+ .shell{padding:14px}
+ .workspace-page,.claude-workspace{height:100dvh;min-height:0;grid-template-columns:1fr!important}
+ .workspace-sidebar{display:none!important}
+ .claude-main-header{height:54px}
+ .conversation-area{padding:28px 0 90px}
+ .welcome-area h1{font-size:30px}
+ .welcome-area p{font-size:12px}
+ .quick-prompts{margin-top:18px}
+ .claude-composer{width:calc(100% - 16px);padding:8px;border-radius:12px}
+ .composer-toolbar{gap:4px;align-items:flex-end}
+ .composer-left{flex-wrap:wrap;max-width:calc(100% - 40px);gap:2px}
+ .composer-left>button,.mode-trigger{font-size:10px;padding:6px}
+ .model-picker{max-width:135px;font-size:10px}
+ .send-button-v3{flex:0 0 32px}
+ .mode-config-grid{grid-template-columns:1fr}
+ .hub-head{align-items:flex-start;flex-direction:column;gap:12px}
+ .hub-head h1{font-size:30px}
+ .project-grid,.feature-grid{grid-template-columns:1fr}
+ .card{padding:18px}
+ .modal-backdrop{padding:10px}
+ .modal-card{padding:16px}
+}

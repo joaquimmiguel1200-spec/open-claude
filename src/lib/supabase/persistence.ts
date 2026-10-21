@@ -50,7 +50,11 @@ export function createPersistence(client: SupabaseClient) {
       if(inserted.error) throw new Error(`Chat create failed: ${inserted.error.message}`); return inserted.data
     },
     async appendMessage(input:{chatId:string;userId:string;role:string;content:string;metadata?:Record<string,unknown>}) {
-      const {data,error}=await client.from('messages').insert(input).select('*').single(); if(error) throw new Error(`Message save failed: ${error.message}`); return data
+      // Map application camelCase fields to the actual public.messages schema.
+      const payload={chat_id:input.chatId,user_id:input.userId,role:input.role,content:input.content,metadata:input.metadata??{}}
+      const {data,error}=await client.from('messages').insert(payload).select('*').single()
+      if(error) throw new Error(`Message save failed: ${error.message}`)
+      return data
     },
     async recentMessages(chatId:string,limit=40) { const {data,error}=await client.from('messages').select('role,content').eq('chat_id',chatId).order('created_at',{ascending:false}).limit(limit); if(error) throw new Error(`Message history failed: ${error.message}`); return (data??[]).reverse() },
     async searchChunks(userId:string,query:string,limit=8) { const {data,error}=await client.from('file_chunks').select('*,files!inner(owner_id)').eq('files.owner_id',userId).ilike('content',`%${query.slice(0,80).replace(/[%_]/g,'')}%`).limit(limit); if(error) return []; return (data??[]).map((r:any)=>({id:r.id,fileId:r.file_id,projectId:null,ownerId:userId,chunkIndex:r.chunk_index,content:r.content,tokenCount:null,metadata:r.metadata??{},embeddingModel:'Supabase/gte-small' as const,embeddingStatus:'ready' as const,contentHash:null,createdAt:r.created_at,updatedAt:r.created_at,similarity:0,keywordScore:1,score:1})) },

@@ -59,6 +59,6 @@ export async function runAgentProfiles(
       return null
     }
   }))
-  const successful = results.filter((result): result is NonNullable<typeof result> => Boolean(result))
+  const successful = results.filter((result) => result !== null) as Array<{id:string;name:string;model:string;provider:string;content:string;fallback?:boolean}>
   return successful
 }

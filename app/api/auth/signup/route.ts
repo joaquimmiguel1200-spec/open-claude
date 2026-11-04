@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message }, { status: 400 })
     }
     const { data: access } = data.session
-      ? await supabase.from('account_access').select('status').eq('user_id', data.user.id).maybeSingle()
+      ? await supabase.from('account_access').select('status').eq('user_id', data.user?.id ?? '').maybeSingle()
       : { data: null }
     const approved = access?.status === 'approved'
     if (data.session && !approved) await supabase.auth.signOut({ scope: 'local' })

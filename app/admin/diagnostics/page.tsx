@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type Result = { name: string; path: string; status?: number; ok: boolean; ms: number; detail: string }
 const groups: Array<{name:string; calls:Array<{method:'GET'|'POST';path:string;body?:unknown}>}> = [
@@ -17,6 +17,7 @@ const groups: Array<{name:string; calls:Array<{method:'GET'|'POST';path:string;b
 ]
 
 export default function AdminDiagnosticsPage(){
+  useEffect(()=>{fetch('/api/workspace',{cache:'no-store'}).then(async r=>{const d=await r.json();const admin=d.account?.role==='admin'||d.account?.email?.toLowerCase()==='joaquimmiguel1200@gmail.com';if(!r.ok||!admin)window.location.replace('/chat')}).catch(()=>window.location.replace('/chat'))},[])
   const [running,setRunning]=useState(false)
   const [results,setResults]=useState<Result[]>([])
   const [finishedAt,setFinishedAt]=useState<string|null>(null)

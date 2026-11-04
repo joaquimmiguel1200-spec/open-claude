@@ -12,7 +12,7 @@ export async function requireUser(){
  if(error||!data.user)throw new Error('UNAUTHENTICATED')
  const {data:access,error:accessError}=await supabase.from('account_access').select('status').eq('user_id',data.user.id).maybeSingle()
  if(accessError)throw new Error('ACCOUNT_ACCESS_CHECK_FAILED')
- if(!access||access.status!=='approved')throw new Error(access?.status==='rejected'?'ACCOUNT_ACCESS_REJECTED':'ACCOUNT_PENDING_APPROVAL')
+ if(!access||access.status!=='approved')throw new Error('UNAUTHENTICATED')
  const suspension=await supabase.from('account_suspensions').select('id,reason,ends_at').eq('user_id',data.user.id).eq('active',true).or('ends_at.is.null,ends_at.gt.'+new Date().toISOString()).limit(1).maybeSingle()
  if(suspension.error)throw new Error(suspension.error.message)
  if(suspension.data)throw new Error('ACCOUNT_SUSPENDED')

@@ -19,8 +19,28 @@ export interface PackedContext {
   droppedItems: ContextItem[]
 }
 
+// Conservative dependency-free estimate; provider-reported usage remains authoritative.
 export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4)
+  if (!text) return 0
+  let estimate = 0
+  let latinRun = 0
+  const flushLatin = () => { if (latinRun) { estimate += Math.ceil(latinRun / 3.6); latinRun = 0 } }
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0
+    if ((code >= 0x2e80 && code <= 0x9fff) || code > 0x1f000) {
+      flushLatin()
+      estimate += 1
+    } else if (/\s/.test(char)) {
+      flushLatin()
+    } else if (/[A-Za-zÀ-ÿ0-9_]/.test(char)) {
+      latinRun += 1
+    } else {
+      flushLatin()
+      estimate += 0.5
+    }
+  }
+  flushLatin()
+  return Math.max(1, Math.ceil(estimate))
 }
 
 function takeWithinBudget(text: string, tokenBudget: number): string {

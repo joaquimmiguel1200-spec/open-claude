@@ -57,7 +57,7 @@ export async function POST(request:Request) {
       instructions:String(body?.instructions??'').trim(),
       model_id:typeof body?.modelId==='string'&&body.modelId.trim()?body.modelId.trim().slice(0,200):null,
       source:'manual',
-      modes:Array.isArray(body?.modes)?body.modes.filter((m:string)=>modes.includes(m)): [...modes],
+      modes:Array.isArray(body?.modes)?body.modes.filter((m:string)=>modes.includes(m as typeof modes[number])): [...modes],
     }
     if(!parsed.name||!parsed.instructions||parsed.instructions.length>20000||!parsed.modes.length)return NextResponse.json({error:'Informe nome, instruções e pelo menos um modo.'},{status:400})
     const {data,error}=await supabase.from('agent_profiles').insert({user_id:user.id,...parsed,metadata:{importedAt:parsed.source==='opencode'?new Date().toISOString():null}}).select('id,name,description,source,model_id,enabled,modes').single()

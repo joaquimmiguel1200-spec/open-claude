@@ -30,7 +30,7 @@ create policy account_access_admin_review on public.account_access for update to
 using ((select public.is_open_claude_admin())) with check ((select public.is_open_claude_admin()));
 
 create or replace function public.bootstrap_open_claude_account()
-returns trigger language plpgsql security definer set search_path = '' as $
+returns trigger language plpgsql security definer set search_path = '' as $$
 declare is_admin boolean := lower(coalesce(new.email,'')) = 'joaquimmiguel1200@gmail.com';
 begin
   update auth.users set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)

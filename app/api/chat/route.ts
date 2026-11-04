@@ -61,7 +61,7 @@ export async function POST(request:Request){
   const providers=await userAIProviders(supabase,user.id)
   const mode=parsed.data.mode??'chat'
   const profileOutputs=await runAgentProfiles(supabase,user.id,mode,parsed.data.message,parsed.data.model,providers,request.signal)
-  const agentContext=profileOutputs.map((x:any)=>`[Agente: ${x.name} | ${x.provider}/${x.model}]\\n${x.content}`).join('\\n\\n')
+  const agentContext=profileOutputs.map((x:any)=>`[Agente: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')
   const context=buildContextRequest({recentMessages:recent as any,memories,ragResults,systemInstructions,toolContext:agentContext?[agentContext]:[]},{messages:[{role:'user',content:parsed.data.message}],model:parsed.data.model,strategy:configuredStrategy(),stream:true,signal:request.signal,metadata:{userId:user.id,chatId:chat.id,projectId:chat.project_id,mode,agentProfiles:profileOutputs.map((x:any)=>x.id)}})
   await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'user',content:parsed.data.message,metadata:{projectId:chat.project_id,mode}})
 

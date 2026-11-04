@@ -20,10 +20,17 @@ export async function runAgentProfiles(
   providers: AIProviderConfig[],
   signal?: AbortSignal,
 ) {
-  const { data, error } = await supabase.from('agent_profiles')
-    .select('id,name,description,instructions,model_id,modes')
-    .eq('user_id', userId).eq('enabled', true).order('created_at', { ascending: true }).limit(12)
-  if (error) throw new Error('Could not load configured agent profiles.')
+  let data: AgentProfile[] | null = null
+  try {
+    const result = await supabase.from('agent_profiles')
+      .select('id,name,description,instructions,model_id,modes')
+      .eq('user_id', userId).eq('enabled', true).order('created_at', { ascending: true }).limit(12)
+    if (result.error) throw result.error
+    data = result.data as AgentProfile[]
+  } catch (error) {
+    console.warn('[agent-orchestrator] profile registry unavailable; using primary model only', { code: (error as any)?.code ?? 'unknown' })
+    return []
+  }
   const active = (data ?? []).filter((profile: AgentProfile) => (profile.modes ?? []).includes(mode)).slice(0, 3)
   const results = await Promise.all(active.map(async (profile: AgentProfile) => {
     const response = await generateAI({

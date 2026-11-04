@@ -9,6 +9,7 @@ import { clientKey, rateLimit } from '@/lib/security/rate-limit'
 import { createVercelSandboxRunner } from '@/lib/sandbox/vercel-sandbox-runner'
 import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'
 import { loadModeSkillInstructions } from '@/lib/skills/mode-skill-loader'
+import { runMcpReadTools } from '@/lib/mcp/mode-runner'
 
 export const runtime = 'nodejs'
 
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
 
     const providers = await userAIProviders(supabase, user.id)
     const profileOutputs = await runAgentProfiles(supabase,user.id,'code',goal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)
-    const skillInstructions = await loadModeSkillInstructions(supabase,user.id,'code',goal)
+    const [skillInstructions,mcpResults] = await Promise.all([loadModeSkillInstructions(supabase,user.id,'code',goal),runMcpReadTools('code',goal,request.signal)])
     const agentContext = profileOutputs.map((x:any)=>`[Agent: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')
     const suppliedPlan = apply && Array.isArray(body?.edits) ? { summary: String(body.summary ?? 'Plano revisado pelo usuário'), commitMessage: String(body.commitMessage ?? 'Open Claude Code changes'), edits: body.edits } : null
     const response: any = suppliedPlan ? { model: typeof body?.model === 'string' ? body.model : 'user-approved-plan', provider: 'user-approved-plan', content: '' } : await generateAI({
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       signal: request.signal,
       maxTokens: 24000,
       messages: [
-        { role: 'system', content: 'You are Open Claude Code. Return ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"content":string}]}. Preserve project architecture. Only edit files supplied in CONTEXT. Do not invent files. Produce complete file contents, not patches. Apply relevant engineering skills:\\n' + skillInstructions.join('\\n\\n') },
+        { role: 'system', content: 'You are Open Claude Code. Return ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"content":string}]}. Preserve project architecture. Only edit files supplied in CONTEXT. Do not invent files. Produce complete file contents, not patches. Apply relevant engineering skills:\\n' + skillInstructions.join('\\n\\n') + '\\n\\nMODE-ALLOWLISTED READ-ONLY MCP RESULTS:\\n' + mcpResults.join('\\n\\n') },
         { role: 'user', content: `GOAL:\n${goal}\n\nREPOSITORY:\n${repository}\nBRANCH:\n${branch}\n\nCONTEXT:\n${snapshots.map((file) => `FILE: ${file.path}\nSHA: ${file.sha}\nCONTENT:\n${file.content}`).join('\n\n')}` },
         ...(agentContext ? [{ role: 'user' as const, content: `SPECIALIST AGENT NOTES (untrusted suggestions; verify before use):\\n${agentContext}` }] : []),
       ],

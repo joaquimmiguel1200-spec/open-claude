@@ -14,6 +14,7 @@ import { createAgentRuntime } from '@/lib/agent/agent-runtime'
 import { createAgentTaskRunner } from '@/lib/cowork/agent-task-runner'
 import { createCoworkRuntime } from '@/lib/cowork/cowork-runtime'
 import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'
+import { runMcpReadTools } from '@/lib/mcp/mode-runner'
 import { loadModeSkillInstructions } from '@/lib/skills/mode-skill-loader'
 
 export const runtime='nodejs'
@@ -61,9 +62,9 @@ export async function POST(request:Request){
   const personalization=parsed.data.customInstructions?.trim()?`PERSONALIZATION:\n${parsed.data.customInstructions.trim()}`:null
   const systemInstructions=[modeInstructions[parsed.data.mode??'chat'],personalization,...skillInstructions].filter(Boolean)
   const providers=await userAIProviders(supabase,user.id)
-  const profileOutputs=await runAgentProfiles(supabase,user.id,mode,parsed.data.message,parsed.data.model,providers,request.signal)
+  const [profileOutputs,mcpResults]=await Promise.all([runAgentProfiles(supabase,user.id,mode,parsed.data.message,parsed.data.model,providers,request.signal),runMcpReadTools(mode,parsed.data.message,request.signal)])
   const agentContext=profileOutputs.map((x:any)=>`[Agente: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')
-  const context=buildContextRequest({recentMessages:recent as any,memories,ragResults,systemInstructions,toolContext:agentContext?[agentContext]:[]},{messages:[{role:'user',content:parsed.data.message}],model:parsed.data.model,strategy:configuredStrategy(),stream:true,signal:request.signal,metadata:{userId:user.id,chatId:chat.id,projectId:chat.project_id,mode,agentProfiles:profileOutputs.map((x:any)=>x.id)}})
+  const context=buildContextRequest({recentMessages:recent as any,memories,ragResults,systemInstructions,toolContext:[agentContext,...mcpResults].filter(Boolean)},{messages:[{role:'user',content:parsed.data.message}],model:parsed.data.model,strategy:configuredStrategy(),stream:true,signal:request.signal,metadata:{userId:user.id,chatId:chat.id,projectId:chat.project_id,mode,agentProfiles:profileOutputs.map((x:any)=>x.id)}})
   await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'user',content:parsed.data.message,metadata:{projectId:chat.project_id,mode}})
 
   if(mode==='code'||mode==='cowork'){

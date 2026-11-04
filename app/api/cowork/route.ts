@@ -7,6 +7,7 @@ import { createCoworkRuntime } from '@/lib/cowork/cowork-runtime'
 import { createPersistence } from '@/lib/supabase/persistence'
 import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'
 import { loadModeSkillInstructions } from '@/lib/skills/mode-skill-loader'
+import { runMcpReadTools } from '@/lib/mcp/mode-runner'
 import { clientKey, rateLimit } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
@@ -27,9 +28,9 @@ export async function POST(request: Request) {
     if (body?.chatId) { const chat = await supabase.from('chats').select('id,project_id').eq('id', body.chatId).eq('owner_id', user.id).maybeSingle(); if (!chat.data) return NextResponse.json({error:'Chat não encontrado ou não autorizado.'},{status:404}) }
     if (body?.projectId) { const project = await supabase.from('projects').select('id').eq('id', body.projectId).eq('owner_id', user.id).maybeSingle(); if (!project.data) return NextResponse.json({error:'Projeto não encontrado ou não autorizado.'},{status:403}) }
     const providers = await userAIProviders(supabase, user.id)
-    const [specialistAgents, skillInstructions] = await Promise.all([runAgentProfiles(supabase,user.id,'cowork',goal,model,providers,request.signal),loadModeSkillInstructions(supabase,user.id,'cowork',goal)])
+    const [specialistAgents, skillInstructions, mcpResults] = await Promise.all([runAgentProfiles(supabase,user.id,'cowork',goal,model,providers,request.signal),loadModeSkillInstructions(supabase,user.id,'cowork',goal),runMcpReadTools('cowork',goal,request.signal)])
     const specialistBrief = specialistAgents.map((item) => `\n\n[Especialista ${item.name} · ${item.provider}/${item.model}]\n${item.content}`).join('')
-    const executionGoal = [goal, skillInstructions.length ? 'ACTIVE COWORK SKILLS:\n' + skillInstructions.join('\n\n') : '', specialistBrief].filter(Boolean).join('\n\n')
+    const executionGoal = [goal, skillInstructions.length ? 'ACTIVE COWORK SKILLS:\n' + skillInstructions.join('\n\n') : '', specialistBrief, mcpResults.length ? 'MODE-ALLOWLISTED READ-ONLY MCP RESULTS:\n' + mcpResults.join('\n\n') : ''].filter(Boolean).join('\n\n')
     const agent = createAgentRuntime({ providers })
     const runtime = createCoworkRuntime({ taskRunner: createAgentTaskRunner(agent, { supabase }), maxConcurrency: 3 })
     const controller = new AbortController()

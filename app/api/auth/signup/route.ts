@@ -41,12 +41,17 @@ export async function POST(request: Request) {
       const message = /password/i.test(error.message) ? 'A senha não atende aos requisitos do provedor.' : 'Não foi possível criar a conta com esses dados.'
       return NextResponse.json({ error: message }, { status: 400 })
     }
+    const { data: access } = data.session
+      ? await supabase.from('account_access').select('status').eq('user_id', data.user.id).maybeSingle()
+      : { data: null }
+    const approved = access?.status === 'approved'
+    if (data.session && !approved) await supabase.auth.signOut({ scope: 'local' })
     return NextResponse.json({
       ok: true,
-      authenticated: Boolean(data.session),
+      authenticated: Boolean(data.session && approved),
       confirmationRequired: !data.session,
-      approvalRequired: true,
-      status: 'pending',
+      approvalRequired: !approved,
+      status: access?.status ?? 'pending',
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
     return NextResponse.json({ error: 'Não foi possível criar a conta agora.' }, { status: 500 })

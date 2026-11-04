@@ -4,7 +4,7 @@ import { userAIProviders } from '@/lib/ai/user-providers'
 import { createAgentRuntime } from '@/lib/agent/agent-runtime'
 import { createAgentTaskRunner } from '@/lib/cowork/agent-task-runner'
 import { createCoworkRuntime } from '@/lib/cowork/cowork-runtime'
-import { createPersistence } from '@/lib/supabase/persistence'
+import { createPersistence } from '@/lib/supabase/persistence'\nimport { runAgentProfiles } from '@/lib/agent/profile-orchestrator'\nimport { loadModeSkillInstructions } from '@/lib/skills/mode-skill-loader'
 import { clientKey, rateLimit } from '@/lib/security/rate-limit'
 
 export const runtime = 'nodejs'
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       action: 'cowork.run',
       resourceType: 'cowork_run',
       resourceId: result.runId,
-      metadata: { status: result.status, tasks: result.plan.tasks.length },
+      metadata: { status: result.status, tasks: result.plan.tasks.length, specialistAgents: specialistAgents.map((item) => item.id) },
     })
 
     return NextResponse.json({

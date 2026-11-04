@@ -49,7 +49,8 @@ export async function POST(request: Request) {
     const profileOutputs = await runAgentProfiles(supabase,user.id,'code',goal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)
     const skillInstructions = await loadModeSkillInstructions(supabase,user.id,'code',goal)
     const agentContext = profileOutputs.map((x:any)=>`[Agent: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')
-    const suppliedPlan = apply && Array.isArray(body?.edits) ? { summary: String(body.summary ?? 'Plano revisado pelo usuário'), commitMessage: String(body.commitMessage ?? 'Open Claude Code changes'), edits: body.edits } : null\n    const response: any = suppliedPlan ? { model: typeof body?.model === 'string' ? body.model : 'user-approved-plan', provider: 'user-approved-plan', content: '' } : await generateAI({
+    const suppliedPlan = apply && Array.isArray(body?.edits) ? { summary: String(body.summary ?? 'Plano revisado pelo usuário'), commitMessage: String(body.commitMessage ?? 'Open Claude Code changes'), edits: body.edits } : null
+    const response: any = suppliedPlan ? { model: typeof body?.model === 'string' ? body.model : 'user-approved-plan', provider: 'user-approved-plan', content: '' } : await generateAI({
       model: typeof body?.model === 'string' ? body.model.trim() : undefined,
       strategy,
       signal: request.signal,

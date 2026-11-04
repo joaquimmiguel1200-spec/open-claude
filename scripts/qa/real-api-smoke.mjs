@@ -12,12 +12,13 @@ const tests = [
   ['02 workspace', 'GET', '/api/workspace'],
   ['03 models', 'GET', '/api/models'],
   ['04 providers', 'GET', '/api/settings/providers'],
-  ['05 skills + agent profiles', 'GET', '/api/settings/skills'],
-  ['06 MCP registry', 'GET', '/api/mcp'],
-  ['07 GitHub connection', 'GET', '/api/github/connection'],
-  ['08 Chat real inference', 'POST', '/api/chat', { message: 'Resuma em três pontos o que um SaaS precisa para ter onboarding seguro.', mode: 'chat', stream: false }],
-  ['09 Code plan', 'POST', '/api/code', codePayload],
-  ['10 Cowork execution', 'POST', '/api/cowork', coworkPayload],
+  ['05 skills', 'GET', '/api/settings/skills'],
+  ['06 agent profiles', 'GET', '/api/agents/profiles'],
+  ['07 MCP registry', 'GET', '/api/mcp'],
+  ['08 GitHub connection', 'GET', '/api/github/connection'],
+  ['09 Chat real inference', 'POST', '/api/chat', { message: 'Resuma em três pontos o que um SaaS precisa para ter onboarding seguro.', mode: 'chat', stream: false }],
+  ['10 Code plan', 'POST', '/api/code', codePayload],
+  ['11 Cowork execution', 'POST', '/api/cowork', coworkPayload],
 ];
 let failed = 0;
 for (const [name, method, path, body] of tests) {

@@ -17,16 +17,20 @@ export async function GET(request: Request) {
     if (!limit.allowed) return jsonError('Muitas solicitações MCP. Tente novamente em instantes.', 429)
     const servers = configuredMcpServers()
     const url = new URL(request.url)
+    const mode = url.searchParams.get('mode') || 'chat'
+    if (!['chat','code','cowork'].includes(mode)) return jsonError('Modo MCP inválido.')
+    const scopedServers = servers.filter(item => item.modes?.includes(mode as any))
     const requested = url.searchParams.get('server')
     if (requested) {
-      const server = servers.find(item => item.id === requested)
-      if (!server) return jsonError('Servidor MCP não configurado ou desabilitado.', 404)
+      const server = scopedServers.find(item => item.id === requested)
+      if (!server) return jsonError('Servidor MCP não configurado para este modo de trabalho.', 404)
       const tools = await listMcpTools(server)
       return NextResponse.json({ server: { id: server.id, name: server.name }, tools }, { headers: { 'Cache-Control': 'no-store' } })
     }
     return NextResponse.json({
-      configured: servers.length,
-      servers: servers.map(server => ({ id: server.id, name: server.name, url: new URL(server.url).origin, status: 'configured' })),
+      configured: scopedServers.length,
+      mode,
+      servers: scopedServers.map(server => ({ id: server.id, name: server.name, url: new URL(server.url).origin, status: 'configured' })),
       setupRequired: servers.length === 0,
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
@@ -42,9 +46,9 @@ export async function POST(request: Request) {
     const limit = rateLimit(clientKey(request, user.id) + ':mcp-call', 10, 60_000)
     if (!limit.allowed) return jsonError('Limite de chamadas MCP atingido.', 429)
     const body = await request.json().catch(() => null)
-    if (!body || typeof body.server !== 'string' || typeof body.tool !== 'string' || !body.arguments || typeof body.arguments !== 'object' || Array.isArray(body.arguments)) return jsonError('Informe server, tool e arguments válidos.')
+    if (!body || !['chat','code','cowork'].includes(body.mode) || typeof body.server !== 'string' || typeof body.tool !== 'string' || !body.arguments || typeof body.arguments !== 'object' || Array.isArray(body.arguments)) return jsonError('Informe server, tool e arguments válidos.')
     const servers = configuredMcpServers()
-    const server = servers.find(item => item.id === body.server)
+    const server = servers.find(item => item.id === body.server && item.modes?.includes(body.mode))
     if (!server) return jsonError('Servidor MCP não configurado ou desabilitado.', 404)
     const tools = await listMcpTools(server)
     const tool = tools.find((item: any) => item.name === body.tool)

@@ -58,20 +58,19 @@ export async function POST(request:Request){
   const skillInstructions=await activeSkillInstructions(supabase,user.id,parsed.data.message)
   const personalization=parsed.data.customInstructions?.trim()?`PERSONALIZATION:\n${parsed.data.customInstructions.trim()}`:null
   const systemInstructions=[modeInstructions[parsed.data.mode??'chat'],personalization,...skillInstructions].filter(Boolean)
-  const context=buildContextRequest({recentMessages:recent as any,memories,ragResults,systemInstructions},{messages:[{role:'user',content:parsed.data.message}],model:parsed.data.model,strategy:configuredStrategy(),stream:true,signal:request.signal,metadata:{userId:user.id,chatId:chat.id,projectId:chat.project_id,mode:parsed.data.mode??'chat'}})
-  await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'user',content:parsed.data.message,metadata:{projectId:chat.project_id,mode:parsed.data.mode??'chat'}})
   const providers=await userAIProviders(supabase,user.id)
   const mode=parsed.data.mode??'chat'
   const profileOutputs=await runAgentProfiles(supabase,user.id,mode,parsed.data.message,parsed.data.model,providers,request.signal)
-  const agentContext=profileOutputs.length?`SPECIALIST AGENT INPUTS (untrusted suggestions; verify before using):\\n${profileOutputs.map((x:any)=>`[${x.name} | ${x.provider}/${x.model}]\\n${x.content}`).join('\\n\\n')}`:''
-  if(agentContext)context.request.messages=[...(context.request.messages??[]),{role:'system',content:agentContext}]
+  const agentContext=profileOutputs.map((x:any)=>`[Agente: ${x.name} | ${x.provider}/${x.model}]\\n${x.content}`).join('\\n\\n')
+  const context=buildContextRequest({recentMessages:recent as any,memories,ragResults,systemInstructions,toolContext:agentContext?[agentContext]:[]},{messages:[{role:'user',content:parsed.data.message}],model:parsed.data.model,strategy:configuredStrategy(),stream:true,signal:request.signal,metadata:{userId:user.id,chatId:chat.id,projectId:chat.project_id,mode,agentProfiles:profileOutputs.map((x:any)=>x.id)}})
+  await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'user',content:parsed.data.message,metadata:{projectId:chat.project_id,mode}})
 
   if(mode==='code'||mode==='cowork'){
     const agent=createAgentRuntime({providers})
     let assistant=''
     const events:any[]=[]
     if(mode==='code'){
-      const result=await agent.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:`${parsed.data.message}\n\n${systemInstructions.join('\n')}`,messages:recent as any,model:parsed.data.model,strategy:configuredStrategy(),maxSteps:6,signal:request.signal},event=>events.push(event))
+      const result=await agent.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:`${parsed.data.message}\n\n${systemInstructions.join('\n')}\n\n${agentContext}`,messages:recent as any,model:parsed.data.model,strategy:configuredStrategy(),maxSteps:6,signal:request.signal},event=>events.push(event))
       assistant=result.response?.content??result.error??'O modo Code não produziu uma resposta.'
       events.push({type:'mode.completed',mode,runId:result.runId,model:result.response?.model,provider:result.response?.provider})
     }else{
@@ -89,10 +88,10 @@ export async function POST(request:Request){
   const wantsStream=request.headers.get('accept')?.includes('text/event-stream')||parsed.data.stream===true
   if(!wantsStream){
    const response=await generateAI({...context.request,stream:false},providers)
-   await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:response.content,metadata:{model:response.model,usage:response.usage,cost:response.cost,mode}})
+   await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:response.content,metadata:{model:response.model,usage:response.usage,cost:response.cost,mode,optimization:{estimatedInputTokens:context.context.estimatedInputTokens,droppedContextItems:context.context.droppedItems,sourceStats:context.context.sourceStats}}})
    await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{role:'user',content:parsed.data.message}},persistence.memoryStore)
    await persistence.audit({userId:user.id,projectId:chat.project_id,action:'chat.message',resourceType:'chat',resourceId:chat.id,metadata:{mode}})
-   return NextResponse.json({id:response.id,chatId:chat.id,content:response.content.trim(),model:response.model,usage:response.usage,cost:response.cost},{headers:{'Cache-Control':'no-store'}})
+   return NextResponse.json({id:response.id,chatId:chat.id,content:response.content.trim(),model:response.model,usage:response.usage,cost:response.cost,optimization:{estimatedInputTokens:context.context.estimatedInputTokens,droppedContextItems:context.context.droppedItems,sourceStats:context.context.sourceStats},agents:profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider}))},{headers:{'Cache-Control':'no-store'}})
   }
   const encoder=new TextEncoder();let assistant=''
   const stream=new ReadableStream<Uint8Array>({async start(controller){try{for await(const event of streamAIResponse(context.request,providers)){if(event.type==='delta')assistant+=event.delta??'';controller.enqueue(encoder.encode(`data: ${JSON.stringify({...event,chatId:chat.id})}\n\n`))}if(assistant)await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:assistant,metadata:{model:parsed.data.model??null,mode}});if(assistant)await captureMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,turn:{role:'user',content:parsed.data.message}},persistence.memoryStore);await persistence.audit({userId:user.id,projectId:chat.project_id,action:'chat.message',resourceType:'chat',resourceId:chat.id,metadata:{mode}});controller.close()}catch(error){const detail=error instanceof Error?error.message:'';const message=/NO_PROVIDER|no provider|not configured|no ai model is available/i.test(detail)?'Nenhum provedor de IA configurado. Adicione e teste uma API em Configurações.':'Não foi possível concluir a geração. Verifique a API configurada e tente novamente.';console.error('[chat] stream failed',{message:detail.slice(0,300)});controller.enqueue(encoder.encode(`data: ${JSON.stringify({type:'error',error:{code:/NO_PROVIDER|no provider|not configured|no ai model is available/i.test(detail)?'NO_PROVIDER':'UPSTREAM_ERROR',message,retryable:false}})}\n\n`));controller.close()}}})

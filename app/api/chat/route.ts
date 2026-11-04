@@ -30,7 +30,7 @@ async function activeSkillInstructions(supabase:any,userId:string,query:string){
   const {data:overrides}=await supabase.from('user_skills').select('skill_id,enabled').eq('user_id',userId)
   const disabled=new Set((overrides??[]).filter((x:any)=>x.enabled===false).map((x:any)=>x.skill_id))
   const active=skills.filter((s:any)=>!disabled.has(s.id))
-  const matches=matchSkills(active.map((s:any)=>({...s,source:s.owner_id?'user':'builtin'})),query,5)
+  const matches=matchSkills(active.map((s:any)=>({...s,source:s.owner_id?'user':'builtin'})),query,Math.min(active.length,50))
   return matches.map(x=>`SKILL: ${x.skill.name}\nDESCRIPTION: ${x.skill.description}\nINSTRUCTIONS:\n${x.skill.instructions}`)
 }
 

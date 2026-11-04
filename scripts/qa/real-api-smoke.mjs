@@ -12,24 +12,28 @@ const tests = [
   ['02 workspace', 'GET', '/api/workspace'],
   ['03 models', 'GET', '/api/models'],
   ['04 providers', 'GET', '/api/settings/providers'],
-  ['05 skills', 'GET', '/api/settings/skills'],
-  ['06 agent profiles', 'GET', '/api/agents/profiles'],
-  ['07 MCP registry', 'GET', '/api/mcp'],
-  ['08 GitHub connection', 'GET', '/api/github/connection'],
-  ['09 Chat real inference', 'POST', '/api/chat', { message: 'Resuma em três pontos o que um SaaS precisa para ter onboarding seguro.', mode: 'chat', stream: false }],
-  ['10 Code plan', 'POST', '/api/code', codePayload],
-  ['11 Cowork execution', 'POST', '/api/cowork', coworkPayload],
+  ['05 skills + agent profiles', 'GET', ['/api/settings/skills', '/api/agents/profiles']],
+  ['06 MCP registry', 'GET', '/api/mcp'],
+  ['07 GitHub connection', 'GET', '/api/github/connection'],
+  ['08 Chat real inference', 'POST', '/api/chat', { message: 'Resuma em três pontos o que um SaaS precisa para ter onboarding seguro.', mode: 'chat', stream: false }],
+  ['09 Code plan', 'POST', '/api/code', codePayload],
+  ['10 Cowork execution', 'POST', '/api/cowork', coworkPayload],
 ];
 let failed = 0;
-for (const [name, method, path, body] of tests) {
+for (const [name, method, target, body] of tests) {
   const started = Date.now();
-  try {
-    const response = await fetch(base + path, { method, headers: path === '/api/health' ? {} : headers, ...(body ? { body: JSON.stringify(body) } : {}) });
-    const raw = await response.text();
-    let data; try { data = JSON.parse(raw); } catch { data = raw.slice(0, 500); }
-    if (!response.ok) failed++;
-    console.log(JSON.stringify({ test: name, status: response.status, pass: response.ok, ms: Date.now() - started, response: typeof data === 'string' ? data : JSON.stringify(data).slice(0, 1200) }));
-  } catch (error) { failed++; console.log(JSON.stringify({ test: name, pass: false, ms: Date.now() - started, error: String(error) })); }
+  const paths = Array.isArray(target) ? target : [target];
+  const results = [];
+  for (const path of paths) {
+    try {
+      const response = await fetch(base + path, { method, headers: path === '/api/health' ? {} : headers, ...(body ? { body: JSON.stringify(body) } : {}) });
+      const raw = await response.text();
+      let data; try { data = JSON.parse(raw); } catch { data = raw.slice(0, 500); }
+      results.push({ path, status: response.status, pass: response.ok, response: typeof data === 'string' ? data : JSON.stringify(data).slice(0, 600) });
+      if (!response.ok) failed++;
+    } catch (error) { failed++; results.push({ path, pass: false, error: String(error) }); }
+  }
+  console.log(JSON.stringify({ test: name, pass: results.every(x => x.pass), ms: Date.now() - started, results }));
 }
 console.log(JSON.stringify({ summary: { total: tests.length, failed, passed: tests.length - failed } }));
 process.exit(failed ? 1 : 0);

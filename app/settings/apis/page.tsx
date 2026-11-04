@@ -1,3 +1,3 @@
 'use client'
-import SettingsPage from '../page'
-export default function APIsSettingsPage(){return <SettingsPage initialTab="apis" />}
+import SettingsPage from '../manager/page'
+export default function ApisPage(){return <SettingsPage initialTab="apis"/>}

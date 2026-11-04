@@ -45,9 +45,16 @@ export function estimateTokens(text: string): number {
 
 function takeWithinBudget(text: string, tokenBudget: number): string {
   if (tokenBudget <= 0) return ''
-  const maxChars = tokenBudget * 4
-  if (text.length <= maxChars) return text
-  return `${text.slice(0, Math.max(0, maxChars - 1))}…`
+  const chars = Array.from(text)
+  let low = 0
+  let high = chars.length
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2)
+    if (estimateTokens(chars.slice(0, middle).join('')) <= tokenBudget) low = middle
+    else high = middle - 1
+  }
+  if (low >= chars.length) return text
+  return low > 0 ? chars.slice(0, low).join('') + '…' : '…'
 }
 
 export function packContext(items: ContextItem[], budget: ContextBudget): PackedContext {

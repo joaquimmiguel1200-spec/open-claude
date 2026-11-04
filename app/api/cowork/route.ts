@@ -25,6 +25,9 @@ export async function POST(request: Request) {
     if (body?.chatId) { const chat = await supabase.from('chats').select('id,project_id').eq('id', body.chatId).eq('owner_id', user.id).maybeSingle(); if (!chat.data) return NextResponse.json({error:'Chat não encontrado ou não autorizado.'},{status:404}) }
     if (body?.projectId) { const project = await supabase.from('projects').select('id').eq('id', body.projectId).eq('owner_id', user.id).maybeSingle(); if (!project.data) return NextResponse.json({error:'Projeto não encontrado ou não autorizado.'},{status:403}) }
     const providers = await userAIProviders(supabase, user.id)
+    const [specialistAgents, skillInstructions] = await Promise.all([runAgentProfiles(supabase,user.id,'cowork',goal,model,providers,request.signal),loadModeSkillInstructions(supabase,user.id,'cowork',goal)])
+    const specialistBrief = specialistAgents.map((item) => `\n\n[Especialista ${item.name} · ${item.provider}/${item.model}]\n${item.content}`).join('')
+    const executionGoal = [goal, skillInstructions.length ? 'ACTIVE COWORK SKILLS:\n' + skillInstructions.join('\n\n') : '', specialistBrief].filter(Boolean).join('\n\n')
     const agent = createAgentRuntime({ providers })
     const runtime = createCoworkRuntime({ taskRunner: createAgentTaskRunner(agent, { supabase }), maxConcurrency: 3 })
     const controller = new AbortController()
@@ -35,7 +38,7 @@ export async function POST(request: Request) {
       userId: user.id,
       projectId: typeof body?.projectId === 'string' ? body.projectId : null,
       chatId: typeof body?.chatId === 'string' ? body.chatId : null,
-      goal,
+      goal: executionGoal,
       model,
       strategy,
       maxTasks: Math.max(1, Math.min(Number(body?.maxTasks ?? 5), 8)),
@@ -67,6 +70,7 @@ export async function POST(request: Request) {
       status: result.status,
       plan: result.plan,
       events: result.events,
+      specialistAgents: specialistAgents.map(({id,name,model,provider})=>({id,name,model,provider})),
       error: result.error,
     }, { status: result.status === 'completed' ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {

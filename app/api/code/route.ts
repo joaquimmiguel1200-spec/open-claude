@@ -7,6 +7,7 @@ import { createCodeAgent } from '@/lib/code-agent/code-agent'
 import type { AIRoutingStrategy } from '@/types/ai'
 import { clientKey, rateLimit } from '@/lib/security/rate-limit'
 import { createVercelSandboxRunner } from '@/lib/sandbox/vercel-sandbox-runner'
+import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'
 
 export const runtime = 'nodejs'
 
@@ -44,6 +45,8 @@ export async function POST(request: Request) {
     }
 
     const providers = await userAIProviders(supabase, user.id)
+    const profileOutputs = await runAgentProfiles(supabase,user.id,'code',goal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)
+    const agentContext = profileOutputs.map((x:any)=>`[Agent: ${x.name} | ${x.provider}/${x.model}]\\n${x.content}`).join('\\n\\n')
     const response = await generateAI({
       model: typeof body?.model === 'string' ? body.model.trim() : undefined,
       strategy,
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
         { role: 'system', content: 'You are Open Claude Code. Return ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"content":string}]}. Preserve project architecture. Only edit files supplied in CONTEXT. Do not invent files. Produce complete file contents, not patches.' },
         { role: 'user', content: `GOAL:\n${goal}\n\nREPOSITORY:\n${repository}\nBRANCH:\n${branch}\n\nCONTEXT:\n${snapshots.map((file) => `FILE: ${file.path}\nSHA: ${file.sha}\nCONTENT:\n${file.content}`).join('\n\n')}` },
       ],
-      metadata: { mode: 'code', userId: user.id, repository, branch, strategy },
+      metadata: { mode: 'code', userId: user.id, repository, branch, strategy, agentProfiles: profileOutputs.map((x:any)=>x.id) },
     }, providers)
 
     const plan = extractJson(response.content)
@@ -66,7 +69,7 @@ export async function POST(request: Request) {
       return { path, kind: 'update' as const, content: String(edit?.content ?? ''), expectedSha: allowed.get(path) }
     })
 
-    if (!apply) return NextResponse.json({ mode: 'code', applied: false, repository, branch, summary: String(plan.summary ?? ''), commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), edits, model: response.model, provider: response.provider }, { headers: { 'Cache-Control': 'no-store' } })
+    if (!apply) return NextResponse.json({ mode: 'code', applied: false, repository, branch, summary: String(plan.summary ?? ''), commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), edits, model: response.model, provider: response.provider, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { headers: { 'Cache-Control': 'no-store' } })
 
     const sandboxRunner=createVercelSandboxRunner()
     const testConfig=testCommand?{image:'node22',commands:[testCommand.split(/\s+/).filter(Boolean)],files:snapshots.map(x=>({path:x.path,content:x.content})),allowNetwork:false,workingDirectory:'/vercel/sandbox'}:undefined
@@ -90,7 +93,7 @@ export async function POST(request: Request) {
       }
     })
     const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })
-    return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider, testCommand: testCommand||null }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider, testCommand: testCommand||null, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const detail = error instanceof Error ? error.message : ''
     console.error('[code] request failed', { message: detail.slice(0, 300) })

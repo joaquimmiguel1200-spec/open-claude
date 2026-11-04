@@ -16,23 +16,24 @@ export default function McpPage() {
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [setupRequired, setSetupRequired] = useState(false)
+  const [mode,setMode] = useState<'chat'|'code'|'cowork'>('chat')
 
-  async function refresh() {
+  async function refresh(nextMode = mode) {
     setLoading(true); setError('')
     try {
-      const response = await fetch('/api/mcp', { cache: 'no-store' })
+      const response = await fetch('/api/mcp?mode=' + nextMode, { cache: 'no-store' })
       const data = await response.json()
       if (response.status === 401) { window.location.href = '/login'; return }
       if (!response.ok) throw new Error(data.error || 'Não foi possível carregar as conexões.')
       setServers(data.servers || []); setSetupRequired(Boolean(data.setupRequired))
-      if (data.servers?.length) await loadTools(data.servers[0].id)
+      if (data.servers?.length) await loadTools(data.servers[0].id,nextMode)
     } catch (e) { setError(e instanceof Error ? e.message : 'Falha ao carregar MCP.') }
     finally { setLoading(false) }
   }
-  async function loadTools(id: string) {
+  async function loadTools(id: string,nextMode = mode) {
     setSelected(id); setTools([]); setChosen(null); setResult(''); setError('')
     try {
-      const response = await fetch('/api/mcp?server=' + encodeURIComponent(id), { cache: 'no-store' })
+      const response = await fetch('/api/mcp?server=' + encodeURIComponent(id) + '&mode=' + nextMode, { cache: 'no-store' })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Não foi possível listar ferramentas.')
       setTools(data.tools || [])
@@ -45,7 +46,7 @@ export default function McpPage() {
     try {
       const parsed = JSON.parse(args)
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Os argumentos precisam ser um objeto JSON.')
-      const response = await fetch('/api/mcp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ server: selected, tool: chosen.name, arguments: parsed }) })
+      const response = await fetch('/api/mcp', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ server: selected, tool: chosen.name, arguments: parsed, mode }) })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'A ferramenta não foi executada.')
       setResult(JSON.stringify(data.result, null, 2))
@@ -58,7 +59,7 @@ export default function McpPage() {
     <section className="card" style={{ marginTop: 28 }}>
       <p className="eyebrow">Conectividade extensível</p><h1 style={{ fontSize: 'clamp(2rem,5vw,3.5rem)', letterSpacing: '-.06em', margin: '8px 0' }}>MCP & Conexões</h1>
       <p className="muted" style={{ lineHeight: 1.7, maxWidth: 760 }}>Conecte servidores Model Context Protocol configurados pelo administrador. Credenciais permanecem no servidor; ferramentas sem indicação explícita de somente leitura ficam bloqueadas nesta versão inicial.</p>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '20px 0' }}><span className="button secondary compact">JSON-RPC 2.0</span><span className="button secondary compact">Streamable HTTP</span><span className="button secondary compact">Timeout 12 s</span><button className="button compact" onClick={() => void refresh()} disabled={loading}>{loading ? 'Atualizando…' : 'Atualizar conexões'}</button></div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '20px 0' }}><label style={{display:'flex',alignItems:'center',gap:8,fontSize:12}}>Modo<select value={mode} onChange={e=>{const next=e.target.value as 'chat'|'code'|'cowork';setMode(next);void refresh(next)}} style={{background:'var(--surface-2)',color:'var(--text)',border:'1px solid var(--line)',borderRadius:8,padding:'7px 10px'}}><option value="chat">Chat</option><option value="code">Code</option><option value="cowork">Cowork</option></select></label><span className="button secondary compact">JSON-RPC 2.0</span><span className="button secondary compact">Streamable HTTP</span><span className="button secondary compact">Timeout 12 s</span><button className="button compact" onClick={() => void refresh()} disabled={loading}>{loading ? 'Atualizando…' : 'Atualizar conexões'}</button></div>
       {error && <p role="alert" style={{ color: '#ff8c9b', whiteSpace: 'pre-wrap' }}>{error}</p>}
       {loading ? <p className="muted">Carregando servidores configurados…</p> : setupRequired ? <div style={{ padding: 20, borderRadius: 14, border: '1px solid var(--line)', background: 'var(--surface-2)' }}><h2>Configure seu primeiro servidor</h2><p className="muted">Adicione a variável de ambiente <code>MCP_SERVERS_JSON</code> na Vercel. Exemplo de configuração está no README e em <code>.env.example</code>. Depois, faça um novo deploy.</p><p className="muted">Nenhum servidor é adicionado automaticamente: cada conector precisa ser avaliado, configurado e autorizado.</p><p style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12 }}><a href="https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp" target="_blank" rel="noreferrer" className="accent">Conectores remotos no Claude ↗</a><a href="https://modelcontextprotocol.io/" target="_blank" rel="noreferrer" className="accent">Especificação MCP ↗</a><a href="https://github.com/modelcontextprotocol/servers" target="_blank" rel="noreferrer" className="accent">Servidores de referência ↗</a></p></div> : <div style={{ display: 'grid', gridTemplateColumns: 'minmax(190px, .75fr) minmax(0, 1.5fr)', gap: 18 }}>
         <aside style={{ display: 'grid', alignContent: 'start', gap: 8 }}>{servers.map(server => <button key={server.id} className={'button ' + (selected === server.id ? '' : 'secondary')} onClick={() => void loadTools(server.id)} style={{ justifyContent: 'flex-start', textAlign: 'left' }}>{server.name}</button>)}</aside>

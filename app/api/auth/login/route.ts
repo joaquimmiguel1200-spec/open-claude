@@ -97,11 +97,21 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: error.code === 'email_not_confirmed'
-            ? 'Confirme seu e-mail antes de entrar. Se a mensagem não chegou, use “Reenviar confirmação de e-mail”.'
+            ? 'A confirmação por e-mail ainda está habilitada no Supabase. O administrador precisa desativá-la para usar aprovação interna.'
             : 'E-mail ou senha inválidos.',
         },
         { status: 401, headers: { 'Cache-Control': 'no-store' } },
       )
+    }
+
+    const { data: access, error: accessError } = await supabase.from('account_access').select('status').eq('user_id', data.user?.id ?? '').maybeSingle()
+    if (accessError || !access || access.status !== 'approved') {
+      await supabase.auth.signOut({ scope: 'local' })
+      return NextResponse.json({
+        error: access?.status === 'rejected' ? 'Seu cadastro não foi aprovado. Entre em contato com o administrador.' : 'Cadastro recebido. Aguarde a aprovação do administrador para acessar o workspace.',
+        approvalRequired: true,
+        status: access?.status ?? 'pending',
+      }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
     }
 
     // Check suspension through the signed-in user's RLS-protected view. This

@@ -30,6 +30,14 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/login?error=confirmation', url.origin))
   }
 
+  const { data: authData } = await supabase.auth.getUser()
+  if (!authData.user) return NextResponse.redirect(new URL('/login?error=oauth', url.origin))
+  const { data: access, error: accessError } = await supabase.from('account_access').select('status').eq('user_id', authData.user.id).maybeSingle()
+  if (accessError || !access || access.status !== 'approved') {
+    await supabase.auth.signOut({ scope: 'local' })
+    return NextResponse.redirect(new URL('/login?approval=pending', url.origin))
+  }
+
   const completion = new URL('/auth/complete', url.origin)
   completion.searchParams.set('next', next)
   return NextResponse.redirect(completion)

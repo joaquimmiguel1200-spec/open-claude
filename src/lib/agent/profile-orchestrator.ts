@@ -33,8 +33,8 @@ export async function runAgentProfiles(
   }
   const active = (data ?? []).filter((profile: AgentProfile) => (profile.modes ?? []).includes(mode)).slice(0, 3)
   const results = await Promise.all(active.map(async (profile: AgentProfile) => {
-    const response = await generateAI({
-      model: profile.model_id || selectedModel,
+    const run = (model?: string) => generateAI({
+      model,
       strategy: 'auto',
       maxTokens: 900,
       temperature: 0.2,
@@ -48,12 +48,25 @@ export async function runAgentProfiles(
           `DESCRIPTION: ${profile.description}`,
           'AGENT INSTRUCTIONS:',
           profile.instructions,
-        ].join('\n\n') },
+        ].join('\\n\\n') },
         { role: 'user', content: goal },
       ],
       metadata: { userId, agentProfileId: profile.id, agentMode: mode },
     }, providers)
-    return { id: profile.id, name: profile.name, model: response.model, provider: response.provider, content: response.content }
+    try {
+      const response = await run(profile.model_id || selectedModel)
+      return { id: profile.id, name: profile.name, model: response.model, provider: response.provider, content: response.content }
+    } catch (error) {
+      if (profile.model_id && selectedModel && profile.model_id !== selectedModel) {
+        try {
+          const fallback = await run(selectedModel)
+          return { id: profile.id, name: profile.name, model: fallback.model, provider: fallback.provider, content: fallback.content, fallback: true }
+        } catch { /* The specialist is skipped; the main model can still complete the request. */ }
+      }
+      console.warn('[agent-orchestrator] specialist skipped', { agentId: profile.id, reason: error instanceof Error ? error.message.slice(0,120) : 'unknown' })
+      return null
+    }
   }))
-  return results
+  const successful = results.filter((result): result is NonNullable<typeof result> => Boolean(result))
+  return successful
 }

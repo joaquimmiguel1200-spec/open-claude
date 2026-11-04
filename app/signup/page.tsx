@@ -2,6 +2,7 @@
 import {FormEvent,useState} from 'react'
 import {useRouter} from 'next/navigation'
 import Link from 'next/link'
+import {createSupabaseBrowserClient} from '@/lib/supabase/browser'
 
 export default function SignupPage(){
  const router=useRouter()
@@ -11,6 +12,9 @@ export default function SignupPage(){
  const [error,setError]=useState('')
  const [message,setMessage]=useState('')
  const [loading,setLoading]=useState(false)
+ const [oauthLoading,setOauthLoading]=useState('')
+
+ async function oauth(provider:'google'|'azure'|'github'){setError('');setOauthLoading(provider);try{const supabase=createSupabaseBrowserClient();const {error}=await supabase.auth.signInWithOAuth({provider,options:{redirectTo:window.location.origin+'/auth/callback',...(provider==='azure'?{scopes:'email openid profile'}:{})}});if(error)throw error}catch{setError('Cadastro social indisponível. Verifique as credenciais e a ativação do provedor no Supabase.');setOauthLoading('')}}
 
  async function acceptPolicies(){
   const results=await Promise.all(['terms','privacy','security','cookies','acceptable_use','ai'].map(policyType=>fetch('/api/policy-acceptance',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({policyType})})))
@@ -42,11 +46,13 @@ export default function SignupPage(){
  return <main className="shell"><div className="chat card">
   <Link href="/" className="auth-brand" aria-label="Voltar à página inicial"><img src="/open-claude-logo.svg" alt="Open Claude" width="190" height="54" /></Link>
   <h1>Criar conta</h1>
+  <div style={{display:'grid',gap:8,margin:'18px 0'}}><button type="button" className="button secondary" disabled={!!oauthLoading} onClick={()=>oauth('google')}>Cadastrar com Google</button><button type="button" className="button secondary" disabled={!!oauthLoading} onClick={()=>oauth('azure')}>Cadastrar com Microsoft</button><button type="button" className="button secondary" disabled={!!oauthLoading} onClick={()=>oauth('github')}>Cadastrar com GitHub</button></div>
+  <p className="muted">Ou cadastre-se com e-mail e senha:</p>
   <form onSubmit={submit}>
    <label>E-mail<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} maxLength={254}/></label>
    <label>Senha<input required minLength={8} maxLength={128} type="password" autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/><span className="muted">Use pelo menos 8 caracteres.</span></label>
    <label style={{display:'flex',gap:8,alignItems:'flex-start'}}><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} required/><span>Li e aceito os <Link href="/terms">Termos</Link>, a <Link href="/privacy">Política de Privacidade</Link>, a <Link href="/security">Política de Segurança</Link> e as regras de uso.</span></label>
-   {error&&<p role="alert">{error}</p>}
+   {oauthLoading&&<p className="muted">Conectando com {oauthLoading}…</p>}{error&&<p role="alert">{error}</p>}
    {message&&<p role="status">{message}</p>}
    <button className="button" disabled={loading}>{loading?'Criando…':'Criar conta'}</button>
   </form>

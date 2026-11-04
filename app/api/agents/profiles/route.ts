@@ -78,7 +78,7 @@ export async function PATCH(request:Request) {
     const patch:Record<string,unknown>={}
     if(typeof b?.enabled==='boolean')patch.enabled=b.enabled
     if(typeof b?.modelId==='string')patch.model_id=b.modelId.trim().slice(0,200)||null
-    if(Array.isArray(b?.modes))patch.modes=b.modes.filter((m:string)=>modes.includes(m))
+    if(Array.isArray(b?.modes))patch.modes=b.modes.filter((m:string)=>modes.includes(m as typeof modes[number]))
     if(!/^[0-9a-f-]{36}$/i.test(id)||!Object.keys(patch).length)return NextResponse.json({error:'Atualização inválida.'},{status:400})
     patch.updated_at=new Date().toISOString()
     const {data,error}=await supabase.from('agent_profiles').update(patch).eq('id',id).eq('user_id',user.id).select('id').maybeSingle()

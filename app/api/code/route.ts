@@ -7,7 +7,8 @@ import { createCodeAgent } from '@/lib/code-agent/code-agent'
 import type { AIRoutingStrategy } from '@/types/ai'
 import { clientKey, rateLimit } from '@/lib/security/rate-limit'
 import { createVercelSandboxRunner } from '@/lib/sandbox/vercel-sandbox-runner'
-import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'\nimport { loadModeSkillInstructions } from '@/lib/skills/mode-skill-loader'
+import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'
+import { loadModeSkillInstructions } from '@/lib/skills/mode-skill-loader'
 
 export const runtime = 'nodejs'
 
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
     }
 
     const providers = await userAIProviders(supabase, user.id)
-    const profileOutputs = await runAgentProfiles(supabase,user.id,'code',goal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)\n    const skillInstructions = await loadModeSkillInstructions(supabase,user.id,'code',goal)
+    const profileOutputs = await runAgentProfiles(supabase,user.id,'code',goal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)
+    const skillInstructions = await loadModeSkillInstructions(supabase,user.id,'code',goal)
     const agentContext = profileOutputs.map((x:any)=>`[Agent: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')
     const response = await generateAI({
       model: typeof body?.model === 'string' ? body.model.trim() : undefined,

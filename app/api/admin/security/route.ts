@@ -2,9 +2,9 @@ import {NextResponse} from 'next/server'
 import {requireUser} from '@/lib/supabase/server'
 import {createSupabaseAdminClient} from '@/lib/supabase/admin'
 export const runtime='nodejs'
-function isAdmin(id:string){return (process.env.ADMIN_USER_IDS??'').split(',').map(x=>x.trim()).filter(Boolean).includes(id)}
+function isAdmin(user:any){return user?.app_metadata?.role==='admin'||(process.env.ADMIN_USER_IDS??'').split(',').map(x=>x.trim()).filter(Boolean).includes(user?.id)}
 export async function GET(){
- try{const {user}=await requireUser();if(!isAdmin(user.id))return NextResponse.json({error:'Forbidden'},{status:403});const admin=createSupabaseAdminClient();const [reports,suspensions,alerts]=await Promise.all([admin.from('security_reports').select('*').order('created_at',{ascending:false}).limit(200),admin.from('account_suspensions').select('*').order('created_at',{ascending:false}).limit(200),admin.from('security_events').select('*').order('created_at',{ascending:false}).limit(200)]);return NextResponse.json({reports:reports.data??[],suspensions:suspensions.data??[],events:alerts.data??[]})}
+ try{const {user}=await requireUser();if(!isAdmin(user))return NextResponse.json({error:'Forbidden'},{status:403});const admin=createSupabaseAdminClient();const [reports,suspensions,alerts]=await Promise.all([admin.from('security_reports').select('*').order('created_at',{ascending:false}).limit(200),admin.from('account_suspensions').select('*').order('created_at',{ascending:false}).limit(200),admin.from('security_events').select('*').order('created_at',{ascending:false}).limit(200)]);return NextResponse.json({reports:reports.data??[],suspensions:suspensions.data??[],events:alerts.data??[]})}
  catch(e){const m=e instanceof Error?e.message:'Forbidden';return NextResponse.json({error:m},{status:m==='UNAUTHENTICATED'?401:500})}
 }
 export async function POST(request:Request){

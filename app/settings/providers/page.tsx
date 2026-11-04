@@ -1,3 +1,3 @@
 'use client'
-import SettingsPage from '../page'
+import SettingsPage from '../manager/page'
 export default function ProvidersPage(){return <SettingsPage initialTab="apis"/>}

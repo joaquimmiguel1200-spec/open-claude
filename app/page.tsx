@@ -1,58 +1,44 @@
 import Link from 'next/link'
 
-const features = [
-  ['Contexto contínuo', 'Memória, projetos e arquivos trabalham juntos para a conversa não começar do zero.'],
-  ['Canvas vivo', 'Transforme respostas em documentos, código, fluxos e artefatos editáveis.'],
-  ['Ferramentas conectadas', 'Configure provedores de IA, Skills e integrações autorizadas no mesmo workspace. Algumas funções exigem credenciais próprias.'],
+const capabilities = [
+ {n:'01',title:'Contexto que acompanha o trabalho',body:'Projetos, arquivos, memória e histórico formam uma base contextual organizada. O sistema seleciona o que é relevante e reserva espaço para a resposta.'},
+ {n:'02',title:'Modelos e provedores à sua escolha',body:'Conecte provedores por API, compare modelos e escolha estratégias por custo, velocidade ou qualidade. As chaves são armazenadas criptografadas no servidor.'},
+ {n:'03',title:'Agentes especializados',body:'Importe agentes no formato OpenCode, atribua modelos próprios e combine especialistas em fluxos de Chat, Code e Cowork.'},
+ {n:'04',title:'Trabalho com ferramentas e permissões',body:'Conecte GitHub, MCP e ferramentas do workspace. Ações sensíveis respeitam permissões, escopo e confirmação.'},
 ]
-
 export default function HomePage() {
-  return (
-    <main className="landing shell">
-      <nav className="nav landing-nav">
-        <Link className="brand landing-brand" href="/"><img src="/open-claude-logo.svg" alt="Open Claude" width="196" height="54" /></Link>
-        <div className="nav-links">
-          <Link href="#features">Recursos</Link>
-          <Link href="/agents">535 agentes</Link>
-          <Link href="#workspace-modes">Chat · Code · Cowork</Link>
-          <Link href="/privacy">Privacidade</Link>
-          <Link className="button secondary compact" href="/login">Entrar</Link>
-          <Link className="button glow compact" href="/signup">Criar conta gratuita</Link>
-        </div>
-      </nav>
-
-      <section className="hero landing-hero">
-        <div className="hero-orbit" aria-hidden="true" />
-        <div className="hero-content">
-          <p className="kicker">UM ESPAÇO PARA PENSAR, CRIAR E CONSTRUIR</p>
-          <h1>De uma ideia<br /><span>ao trabalho real.</span></h1>
-          <p className="hero-copy">Converse, planeje código e organize tarefas em um workspace. Conecte seu provedor de IA para habilitar geração real; Code e Cowork também dependem das integrações e permissões necessárias.</p>
-          <div className="actions">
-            <Link className="button glow" href="/signup">Criar conta gratuita ↗</Link>
-            <Link className="button secondary" href="/login">Entrar no workspace</Link>
-          </div>
-        </div>
-        <div className="hero-window" id="canvas" aria-label="Prévia do workspace">
-          <div className="window-bar"><span /><span /><span /><small>Open Claude · Workspace</small></div>
-          <div className="window-body">
-            <aside><b>OPEN CLAUDE</b><em>+ Novo chat</em><label>WORKSPACE</label><i>Chats</i><i>Projects</i><i>Files</i><i>Canvas</i><i>Skills</i></aside>
-            <div className="window-chat"><small>NEW CONVERSATION</small><h2>O que vamos construir hoje?</h2><p>Pense com clareza. Crie com intenção. Construa com contexto.</p><div className="window-composer">O que vamos construir hoje? <span>＋</span></div></div>
-            <div className="window-canvas"><small>CANVAS · LIVE</small><h3>Product brief</h3><p>Um artefato editável conectado à conversa.</p><div className="mini-card">Contexto contínuo</div><div className="mini-card">Estrutura e ações</div></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="feature-grid" id="features">
-        {features.map(([title, description]) => <article className="feature" key={title}><span className="feature-index">0{features.findIndex(x => x[0] === title) + 1}</span><h3>{title}</h3><p>{description}</p></article>)}
-      </section>
-
-      <section id="workspace-modes" className="feature-grid" aria-label="Modos do workspace">
-        <article className="feature"><span className="feature-index">01</span><h3>Chat</h3><p>Conversas com streaming e histórico. A geração depende de um provedor de IA configurado e válido.</p><Link href="/chat">Abrir Chat ↗</Link></article>
-        <article className="feature"><span className="feature-index">02</span><h3>Code</h3><p>Analisa arquivos autorizados, propõe alterações e exige comando de teste antes de aplicar mudanças no GitHub. Requer conexão GitHub e provedor de IA.</p><Link href="/settings/github">Conectar GitHub ↗</Link></article>
-        <article className="feature"><span className="feature-index">03</span><h3>Cowork</h3><p>Divide tarefas em etapas e executa-as pelo runtime disponível. Requer provedor de IA; ações externas dependem das integrações e permissões conectadas.</p><Link href="/chat">Abrir workspace ↗</Link></article>
-      </section>
-
-      <footer className="footer">Open Claude · Segurança, privacidade e controle por padrão. · <Link href="/privacy">Privacidade</Link> · <Link href="/terms">Termos</Link> · <Link href="/security">Segurança</Link> · <Link href="/cookies">Cookies</Link> · <Link href="/refunds">Reembolso</Link> · <Link href="/ai-policy">IA</Link></footer>
-    </main>
-  )
+ return <main className="landing shell">
+  <nav className="nav landing-nav">
+   <Link className="brand landing-brand" href="/"><img src="/open-claude-logo.svg" alt="Open Claude" width="196" height="54"/></Link>
+   <div className="nav-links"><Link href="#platform">Plataforma</Link><Link href="#models">Modelos</Link><Link href="#agents">Agentes</Link><Link href="/agents">Catálogo</Link><Link href="/privacy">Privacidade</Link><Link className="button secondary compact" href="/login">Entrar</Link><Link className="button glow compact" href="/signup">Solicitar acesso</Link></div>
+  </nav>
+  <section className="hero landing-hero"><div className="hero-orbit" aria-hidden="true"/>
+   <div className="hero-content"><p className="kicker">UM AMBIENTE DE IA · MODELOS · AGENTES · EXECUÇÃO</p><h1>Uma plataforma.<br/><span>Múltiplas inteligências.</span></h1>
+    <p className="hero-copy">Open Claude reúne modelos de IA, agentes especializados, contexto de projetos e ferramentas em um único ambiente de trabalho. Você escolhe os modelos; os agentes ajudam a transformar intenção em execução.</p>
+    <div className="actions"><Link className="button glow" href="/signup">Solicitar acesso ↗</Link><Link className="button secondary" href="#platform">Conhecer a plataforma</Link></div>
+   </div>
+   <div className="hero-window" aria-label="Prévia da plataforma"><div className="window-bar"><span/><span/><span/><small>Open Claude · AI Workspace</small></div><div className="window-body">
+    <aside><b>OPEN CLAUDE</b><em>+ Novo trabalho</em><label>WORKSPACE</label><i>Chat</i><i>Code</i><i>Cowork</i><i>Projetos</i><i>Agentes</i></aside>
+    <div className="window-chat"><small>ORQUESTRAÇÃO DE MODELOS</small><h2>Qual é o próximo desafio?</h2><p>Um modelo principal, agentes especialistas e contexto compartilhado.</p><div className="window-composer">Descreva o trabalho… <span>＋</span></div></div>
+    <div className="window-canvas"><small>AGENT TEAM</small><h3>Equipe ativa</h3><p>Pesquisa · Engenharia · Revisão</p><div className="mini-card">Modelo principal</div><div className="mini-card">Agentes especializados</div></div>
+   </div></div>
+  </section>
+  <section id="platform" className="feature-grid">{capabilities.map(x=><article className="feature" key={x.n}><span className="feature-index">{x.n}</span><h3>{x.title}</h3><p>{x.body}</p></article>)}</section>
+  <section id="models" className="feature-grid">
+   <article className="feature"><span className="feature-index">MODEL LAYER</span><h3>Escolha a inteligência</h3><p>Use modelos hospedados por provedores externos ou serviços compatíveis. Cada conexão precisa de credencial, modelo e teste válidos.</p><Link href="/settings/apis">Configurar provedores ↗</Link></article>
+   <article className="feature"><span className="feature-index">ROUTING</span><h3>Eficiência de contexto</h3><p>Estimativa de tokens, deduplicação de contexto, prioridades para memória e documentos, reserva de saída e seleção de modelos por estratégia. O uso real é confirmado pelo provedor.</p></article>
+   <article className="feature"><span className="feature-index">OBSERVABILIDADE</span><h3>Transparência operacional</h3><p>Uso, latência, provedor e modelo devem ser registrados por execução. O roteamento não esconde falhas nem promete economia sem medição.</p></article>
+  </section>
+  <section id="agents" className="feature-grid">
+   <article className="feature"><span className="feature-index">CHAT</span><h3>Pensar e pesquisar</h3><p>Converse com seu modelo principal e acione agentes especialistas como apoio de pesquisa, planejamento e síntese.</p><Link href="/chat">Abrir Chat ↗</Link></article>
+   <article className="feature"><span className="feature-index">CODE</span><h3>Construir com controle</h3><p>Agentes de engenharia analisam e propõem alterações; execução e operações em repositórios ficam limitadas às ferramentas e permissões concedidas.</p><Link href="/settings/github">Conectar GitHub ↗</Link></article>
+   <article className="feature"><span className="feature-index">COWORK</span><h3>Coordenar trabalhos</h3><p>Divida objetivos em tarefas e combine agentes. O runtime, os dados e as integrações disponíveis definem o que pode realmente ser executado.</p><Link href="/chat">Abrir workspace ↗</Link></article>
+  </section>
+  <section className="feature-grid">
+   <article className="feature"><span className="feature-index">SEGURANÇA</span><h3>Acesso sob aprovação</h3><p>Novos cadastros aguardam aprovação administrativa. O acesso depende de sessão válida e autorização por usuário.</p><Link href="/security">Política de segurança ↗</Link></article>
+   <article className="feature"><span className="feature-index">PRIVACIDADE</span><h3>Dados e credenciais protegidos</h3><p>Isolamento de dados, RLS e criptografia de credenciais são requisitos da plataforma. Integrações recebem apenas o contexto necessário.</p><Link href="/privacy">Privacidade ↗</Link></article>
+   <article className="feature"><span className="feature-index">ECOSSISTEMA</span><h3>Um workspace extensível</h3><p>Modelos, agentes, skills, MCP e ferramentas podem ser conectados com limites claros e rastreabilidade.</p><Link href="/agents">Explorar agentes ↗</Link></article>
+  </section>
+  <footer className="footer">Open Claude · Modelos, agentes e ferramentas sob seu controle. · <Link href="/privacy">Privacidade</Link> · <Link href="/terms">Termos</Link> · <Link href="/security">Segurança</Link> · <Link href="/cookies">Cookies</Link> · <Link href="/ai-policy">Política de IA</Link></footer>
+ </main>
 }

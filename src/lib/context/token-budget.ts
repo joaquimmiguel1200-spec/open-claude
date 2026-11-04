@@ -45,15 +45,16 @@ export function estimateTokens(text: string): number {
 
 function takeWithinBudget(text: string, tokenBudget: number): string {
   if (tokenBudget <= 0) return ''
+  if (estimateTokens(text) <= tokenBudget) return text
   const chars = Array.from(text)
+  const contentBudget = Math.max(0, tokenBudget - 1)
   let low = 0
   let high = chars.length
   while (low < high) {
     const middle = Math.ceil((low + high) / 2)
-    if (estimateTokens(chars.slice(0, middle).join('')) <= tokenBudget) low = middle
+    if (estimateTokens(chars.slice(0, middle).join('')) <= contentBudget) low = middle
     else high = middle - 1
   }
-  if (low >= chars.length) return text
   return low > 0 ? chars.slice(0, low).join('') + '…' : '…'
 }
 

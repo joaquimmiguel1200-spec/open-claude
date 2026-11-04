@@ -21,7 +21,7 @@ export function configuredMcpServers(): McpServerConfig[] {
         const url = new URL(s.url)
         return (url.protocol === 'https:' || (process.env.NODE_ENV !== 'production' && url.protocol === 'http:' && ['localhost','127.0.0.1'].includes(url.hostname))) && (s.modes === undefined || (Array.isArray(s.modes) && s.modes.every((m) => ['chat','code','cowork'].includes(String(m)))))
       } catch { return false }
-    }).map((s) => ({ ...s, modes: Array.isArray(s.modes) ? s.modes as McpMode[] : ['chat'] })).slice(0, 20)
+    }).map((s) => ({ ...s, modes: Array.isArray(s.modes) ? s.modes as McpMode[] : ['chat'] as McpMode[] })).slice(0, 20)
   } catch { return [] }
 }
 

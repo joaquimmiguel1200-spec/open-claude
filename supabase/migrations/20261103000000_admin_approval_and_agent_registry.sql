@@ -30,11 +30,12 @@ create policy account_access_admin_review on public.account_access for update to
 using ((select public.is_open_claude_admin())) with check ((select public.is_open_claude_admin()));
 
 create or replace function public.bootstrap_open_claude_account()
-returns trigger language plpgsql security definer set search_path = '' as $$
+returns trigger language plpgsql security definer set search_path = '' as $
 declare is_admin boolean := lower(coalesce(new.email,'')) = 'joaquimmiguel1200@gmail.com';
 begin
-  new.raw_app_meta_data := coalesce(new.raw_app_meta_data, '{}'::jsonb)
-    || jsonb_build_object('role', case when is_admin then 'admin' else 'user' end);
+  update auth.users set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+    || jsonb_build_object('role', case when is_admin then 'admin' else 'user' end)
+    where id = new.id;
   insert into public.account_access(user_id,email,status,reviewed_at)
   values (new.id, lower(coalesce(new.email,'')), case when is_admin then 'approved' else 'pending' end,
           case when is_admin then now() else null end)
@@ -44,7 +45,7 @@ end;
 $$;
 revoke all on function public.bootstrap_open_claude_account() from public, anon, authenticated;
 drop trigger if exists on_auth_user_created_open_claude_access on auth.users;
-create trigger on_auth_user_created_open_claude_access before insert on auth.users
+create trigger on_auth_user_created_open_claude_access after insert on auth.users
 for each row execute function public.bootstrap_open_claude_account();
 
 update auth.users set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'::jsonb

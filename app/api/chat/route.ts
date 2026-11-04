@@ -14,6 +14,7 @@ import { createAgentRuntime } from '@/lib/agent/agent-runtime'
 import { createAgentTaskRunner } from '@/lib/cowork/agent-task-runner'
 import { createCoworkRuntime } from '@/lib/cowork/cowork-runtime'
 import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'
+import { loadModeSkillInstructions } from '@/lib/skills/mode-skill-loader'
 
 export const runtime='nodejs'
 const routingStrategies:AIRoutingStrategy[]=['auto','quality','cost','latency','free']
@@ -55,11 +56,11 @@ export async function POST(request:Request){
   const recent=await persistence.recentMessages(chat.id,40)
   const memories=await retrieveMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,text:parsed.data.message,limit:12},persistence.memoryStore)
   const ragResults=await persistence.searchChunks(user.id,parsed.data.message,8)
-  const skillInstructions=await activeSkillInstructions(supabase,user.id,parsed.data.message)
+  const mode=parsed.data.mode??'chat'
+  const skillInstructions=mode==='chat'?await activeSkillInstructions(supabase,user.id,parsed.data.message):await loadModeSkillInstructions(supabase,user.id,mode,parsed.data.message)
   const personalization=parsed.data.customInstructions?.trim()?`PERSONALIZATION:\n${parsed.data.customInstructions.trim()}`:null
   const systemInstructions=[modeInstructions[parsed.data.mode??'chat'],personalization,...skillInstructions].filter(Boolean)
   const providers=await userAIProviders(supabase,user.id)
-  const mode=parsed.data.mode??'chat'
   const profileOutputs=await runAgentProfiles(supabase,user.id,mode,parsed.data.message,parsed.data.model,providers,request.signal)
   const agentContext=profileOutputs.map((x:any)=>`[Agente: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')
   const context=buildContextRequest({recentMessages:recent as any,memories,ragResults,systemInstructions,toolContext:agentContext?[agentContext]:[]},{messages:[{role:'user',content:parsed.data.message}],model:parsed.data.model,strategy:configuredStrategy(),stream:true,signal:request.signal,metadata:{userId:user.id,chatId:chat.id,projectId:chat.project_id,mode,agentProfiles:profileOutputs.map((x:any)=>x.id)}})
@@ -74,7 +75,7 @@ export async function POST(request:Request){
       assistant=result.response?.content??result.error??'O modo Code não produziu uma resposta.'
       events.push({type:'mode.completed',mode,runId:result.runId,model:result.response?.model,provider:result.response?.provider})
     }else{
-      const cowork=createCoworkRuntime({taskRunner:createAgentTaskRunner(agent),maxConcurrency:3})
+      const cowork=createCoworkRuntime({taskRunner:createAgentTaskRunner(agent,{supabase}),maxConcurrency:3})
       const result=await cowork.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:`${parsed.data.message}\n\n${agentContext}`,model:parsed.data.model,strategy:configuredStrategy(),maxTasks:5,concurrency:3,signal:request.signal},event=>events.push(event))
       assistant=result.plan.tasks.map((task:any)=>`## ${task.title}\n${typeof task.result==='string'?task.result:JSON.stringify(task.result)}`).join('\n\n')||result.error||'O modo Cowork não produziu um resultado.'
       events.push({type:'mode.completed',mode,runId:result.runId,status:result.status})

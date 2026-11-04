@@ -75,7 +75,7 @@ export async function POST(request:Request){
       events.push({type:'mode.completed',mode,runId:result.runId,model:result.response?.model,provider:result.response?.provider})
     }else{
       const cowork=createCoworkRuntime({taskRunner:createAgentTaskRunner(agent),maxConcurrency:3})
-      const result=await cowork.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:`${parsed.data.message}\\n\\n${agentContext}`,model:parsed.data.model,strategy:configuredStrategy(),maxTasks:5,concurrency:3,signal:request.signal},event=>events.push(event))
+      const result=await cowork.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:`${parsed.data.message}\n\n${agentContext}`,model:parsed.data.model,strategy:configuredStrategy(),maxTasks:5,concurrency:3,signal:request.signal},event=>events.push(event))
       assistant=result.plan.tasks.map((task:any)=>`## ${task.title}\n${typeof task.result==='string'?task.result:JSON.stringify(task.result)}`).join('\n\n')||result.error||'O modo Cowork não produziu um resultado.'
       events.push({type:'mode.completed',mode,runId:result.runId,status:result.status})
     }

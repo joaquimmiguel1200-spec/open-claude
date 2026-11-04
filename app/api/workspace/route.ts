@@ -13,7 +13,7 @@ export async function GET() {
     ])
     if (projectsError) throw new Error(projectsError.message)
     if (chatsError) throw new Error(chatsError.message)
-    return NextResponse.json({ projects: projects ?? [], chats: chats ?? [], profile: profile ?? { display_name: user.email?.split('@')[0] ?? 'User', preferences: {} } })
+    return NextResponse.json({ projects: projects ?? [], chats: chats ?? [], profile: profile ?? { display_name: user.email?.split('@')[0] ?? 'User', preferences: {} }, account: { email: user.email ?? null, role: user.app_metadata?.role === 'admin' ? 'admin' : 'user' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Não foi possível carregar o workspace.'
     return NextResponse.json({ error: message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })

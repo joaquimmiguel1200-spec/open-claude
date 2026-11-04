@@ -33,7 +33,7 @@ export default function SignupPage(){
     catch(e){localStorage.setItem('open-claude-policies-pending','1');setError(e instanceof Error?e.message:'Não foi possível registrar os aceites.')}
    }else{
     localStorage.setItem('open-claude-policies-pending','1')
-    setMessage('A confirmação por e-mail ainda está ativada no Supabase. Desative “Confirm email” nas configurações de Auth do projeto para testar o cadastro sem verificação.')
+    setMessage('Cadastro recebido. Seu acesso ficará aguardando aprovação do administrador. Para que a aprovação interna seja o único fluxo de liberação, o administrador também precisa desativar a confirmação por e-mail nas configurações de Auth do Supabase.')
    }
   }catch{setError('Não foi possível criar a conta agora.')}
   finally{setLoading(false)}

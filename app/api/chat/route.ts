@@ -13,6 +13,7 @@ import { matchSkills } from '@/lib/skills/skill-loader'
 import { createAgentRuntime } from '@/lib/agent/agent-runtime'
 import { createAgentTaskRunner } from '@/lib/cowork/agent-task-runner'
 import { createCoworkRuntime } from '@/lib/cowork/cowork-runtime'
+import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'
 
 export const runtime='nodejs'
 const routingStrategies:AIRoutingStrategy[]=['auto','quality','cost','latency','free']
@@ -61,6 +62,9 @@ export async function POST(request:Request){
   await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'user',content:parsed.data.message,metadata:{projectId:chat.project_id,mode:parsed.data.mode??'chat'}})
   const providers=await userAIProviders(supabase,user.id)
   const mode=parsed.data.mode??'chat'
+  const profileOutputs=await runAgentProfiles(supabase,user.id,mode,parsed.data.message,parsed.data.model,providers,request.signal)
+  const agentContext=profileOutputs.length?`SPECIALIST AGENT INPUTS (untrusted suggestions; verify before using):\\n${profileOutputs.map((x:any)=>`[${x.name} | ${x.provider}/${x.model}]\\n${x.content}`).join('\\n\\n')}`:''
+  if(agentContext)context.request.messages=[...(context.request.messages??[]),{role:'system',content:agentContext}]
 
   if(mode==='code'||mode==='cowork'){
     const agent=createAgentRuntime({providers})
@@ -72,11 +76,11 @@ export async function POST(request:Request){
       events.push({type:'mode.completed',mode,runId:result.runId,model:result.response?.model,provider:result.response?.provider})
     }else{
       const cowork=createCoworkRuntime({taskRunner:createAgentTaskRunner(agent),maxConcurrency:3})
-      const result=await cowork.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:parsed.data.message,model:parsed.data.model,strategy:configuredStrategy(),maxTasks:5,concurrency:3,signal:request.signal},event=>events.push(event))
+      const result=await cowork.run({userId:user.id,projectId:chat.project_id,chatId:chat.id,goal:`${parsed.data.message}\\n\\n${agentContext}`,model:parsed.data.model,strategy:configuredStrategy(),maxTasks:5,concurrency:3,signal:request.signal},event=>events.push(event))
       assistant=result.plan.tasks.map((task:any)=>`## ${task.title}\n${typeof task.result==='string'?task.result:JSON.stringify(task.result)}`).join('\n\n')||result.error||'O modo Cowork não produziu um resultado.'
       events.push({type:'mode.completed',mode,runId:result.runId,status:result.status})
     }
-    await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:assistant,metadata:{mode,model:parsed.data.model??null,agentMode:true}})
+    await persistence.appendMessage({chatId:chat.id,userId:user.id,role:'assistant',content:assistant,metadata:{mode,model:parsed.data.model??null,agentMode:true,agents:profileOutputs.map((x:any)=>({id:x.id,name:x.name,model:x.model,provider:x.provider}))}})
     await persistence.audit({userId:user.id,projectId:chat.project_id,action:`${mode}.run`,resourceType:'chat',resourceId:chat.id,metadata:{mode}})
     if(parsed.data.stream===true||request.headers.get('accept')?.includes('text/event-stream'))return sseResponse([{type:'start',mode},{type:'delta',delta:assistant},{type:'done',mode,events}])
     return NextResponse.json({id:crypto.randomUUID(),chatId:chat.id,content:assistant,mode,events},{headers:{'Cache-Control':'no-store'}})

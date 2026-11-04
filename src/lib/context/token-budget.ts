@@ -56,7 +56,14 @@ export function packContext(items: ContextItem[], budget: ContextBudget): Packed
   const selected: Array<{ item: ContextItem; index: number }> = []
   const droppedItems: ContextItem[] = []
 
-  const ranked = items
+  const seen = new Set<string>()
+  const uniqueItems = items.filter((item) => {
+    const key = item.text.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  const ranked = uniqueItems
     .map((item, index) => ({ item, index }))
     .sort((a, b) => Number(Boolean(b.item.required)) - Number(Boolean(a.item.required)) || b.item.priority - a.item.priority || a.index - b.index)
 

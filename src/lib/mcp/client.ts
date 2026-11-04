@@ -1,6 +1,7 @@
 import 'server-only'
 
-export type McpServerConfig = { id: string; name: string; url: string; tokenEnv?: string; enabled?: boolean }
+export type McpMode = 'chat' | 'code' | 'cowork'
+export type McpServerConfig = { id: string; name: string; url: string; tokenEnv?: string; enabled?: boolean; modes?: McpMode[] }
 type JsonRpc = { jsonrpc: '2.0'; id?: number; method: string; params?: Record<string, unknown> }
 const PROTOCOL_VERSIONS = ['2026-07-28', '2025-11-25', '2025-03-26'] as const
 const MAX_RESPONSE_BYTES = 1_000_000
@@ -18,9 +19,9 @@ export function configuredMcpServers(): McpServerConfig[] {
       if (typeof s.name !== 'string' || typeof s.url !== 'string') return false
       try {
         const url = new URL(s.url)
-        return url.protocol === 'https:' || (process.env.NODE_ENV !== 'production' && url.protocol === 'http:' && ['localhost','127.0.0.1'].includes(url.hostname))
+        return (url.protocol === 'https:' || (process.env.NODE_ENV !== 'production' && url.protocol === 'http:' && ['localhost','127.0.0.1'].includes(url.hostname))) && (s.modes === undefined || (Array.isArray(s.modes) && s.modes.every((m) => ['chat','code','cowork'].includes(String(m)))))
       } catch { return false }
-    }).slice(0, 20)
+    }).map((s) => ({ ...s, modes: Array.isArray(s.modes) ? s.modes as McpMode[] : ['chat'] })).slice(0, 20)
   } catch { return [] }
 }
 

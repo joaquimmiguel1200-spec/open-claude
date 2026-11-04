@@ -32,15 +32,10 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createSupabaseServerClient()
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || new URL(request.url).origin
-    const redirect = new URL('/auth/callback', siteUrl)
-    if (process.env.NODE_ENV === 'production' && redirect.protocol !== 'https:') {
-      return NextResponse.json({ error: 'Configuração de URL segura inválida.' }, { status: 500 })
-    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: redirect.toString() },
+      options: { data: { registration_flow: 'administrator_approval' } },
     })
     if (error) {
       const message = /password/i.test(error.message) ? 'A senha não atende aos requisitos do provedor.' : 'Não foi possível criar a conta com esses dados.'
@@ -50,6 +45,8 @@ export async function POST(request: Request) {
       ok: true,
       authenticated: Boolean(data.session),
       confirmationRequired: !data.session,
+      approvalRequired: true,
+      status: 'pending',
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
     return NextResponse.json({ error: 'Não foi possível criar a conta agora.' }, { status: 500 })

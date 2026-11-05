@@ -32,7 +32,7 @@ export default function AdminConnectorsPage(){
   const envName='MCP_'+cleanId.toUpperCase().replace(/-/g,'_')+'_TOKEN'
   const server={id:cleanId,name:name.trim(),url:parsed.toString(),...(token.trim()?{tokenEnv:envName}:{}),enabled:true,modes}
   const json=JSON.stringify([server],null,2)
-  setOutput('MCP_SERVERS_JSON='+json+(token.trim()?'\\n'+envName+'='+token.trim():''))
+  setOutput('MCP_SERVERS_JSON='+json+(token.trim()?'\n'+envName+'='+token.trim():''))
  }
  async function copy(){if(!output)return;try{await navigator.clipboard.writeText(output);setError('Configuração copiada. Adicione as duas variáveis no Vercel → Settings → Environment Variables e faça novo deploy.')}catch{setError('Não foi possível copiar automaticamente. Selecione o texto e copie manualmente.')}}
  return <main className="shell" style={{maxWidth:1120,paddingTop:32,paddingBottom:60}}>

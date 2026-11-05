@@ -60,8 +60,8 @@ export async function POST(request: Request) {
     const personalityInstructions: Record<string,string> = {balanced:'Use a balanced, natural tone.',professional:'Use a professional, precise tone.',friendly:'Use a warm and approachable tone.',concise:'Be concise and direct.',teacher:'Explain step by step with examples.',analytical:'Explain assumptions, trade-offs and limitations.',creative:'Explore creative alternatives while remaining accurate.'}
     const personalityInstruction = personalityInstructions[preferences.personality] ?? ''
     const customInstructions = typeof body?.customInstructions === 'string' ? body.customInstructions.trim() : String(preferences.customInstructions ?? '').trim()
-    const personalization = [languageInstruction, personalityInstruction, customInstructions].filter(Boolean).join('\\n\\n')
-    const personalizedGoal = [goal, personalization ? 'USER PERSONALIZATION PREFERENCES:\\n' + personalization : ''].filter(Boolean).join('\\n\\n')
+    const personalization = [languageInstruction, personalityInstruction, customInstructions].filter(Boolean).join('\n\n')
+    const personalizedGoal = [goal, personalization ? 'USER PERSONALIZATION PREFERENCES:\n' + personalization : ''].filter(Boolean).join('\n\n')
     const profileOutputs = await runAgentProfiles(supabase,user.id,'code',personalizedGoal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)
     const [skillInstructions,mcpResults] = await Promise.all([loadModeSkillInstructions(supabase,user.id,'code',personalizedGoal),runMcpReadTools('code',goal,request.signal)])
     const agentContext = profileOutputs.map((x:any)=>`[Agent: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')

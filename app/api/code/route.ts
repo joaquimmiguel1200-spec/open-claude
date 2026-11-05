@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/supabase/server'
+import { createPersistence } from '@/lib/supabase/persistence'
 import { userAIProviders } from '@/lib/ai/user-providers'
 import { generateAI } from '@/lib/ai'
 import { createGitHubClientForUser } from '@/lib/github/user-github-client'
@@ -31,6 +32,11 @@ export async function POST(request: Request) {
     const paths = Array.isArray(body?.paths) ? body.paths.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, 20) : []
     const apply = body?.apply === true
     const testCommand = typeof body?.testCommand === 'string' ? body.testCommand.trim() : ''
+    const chatId = typeof body?.chatId === 'string' ? body.chatId : null
+    const projectId = typeof body?.projectId === 'string' ? body.projectId : null
+    const persistence = createPersistence(supabase)
+    if (chatId) { const { data: chat } = await supabase.from('chats').select('id').eq('id', chatId).eq('owner_id', user.id).maybeSingle(); if (!chat) return NextResponse.json({ error: 'Conversa não encontrada ou não autorizada.' }, { status: 404 }) }
+    if (projectId) { const { data: project } = await supabase.from('projects').select('id').eq('id', projectId).eq('owner_id', user.id).maybeSingle(); if (!project) return NextResponse.json({ error: 'Projeto não encontrado ou não autorizado.' }, { status: 403 }) }
     const strategies: AIRoutingStrategy[] = ['auto','quality','cost','latency','free']
     const strategy = strategies.includes(body?.strategy) ? body.strategy : 'free'
     if (!goal || goal.length > 12000) return NextResponse.json({ error: 'O objetivo Code é obrigatório.' }, { status: 400 })
@@ -98,6 +104,8 @@ export async function POST(request: Request) {
       }
     })
     const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })
+    const summary = [String(plan.summary ?? ''), result.success ? 'Execução Code concluída.' : 'A execução Code não foi aprovada.', result.commitSha ? 'Commit: '+result.commitSha : '', (result.tests??[]).map((t:any)=>(t.success?'✓ ':'✗ ')+t.command.join(' ')).join(' | ')].filter(Boolean).join('\\n\\n')
+    if (chatId) { await persistence.appendMessage({chatId,userId:user.id,role:'user',content:goal,metadata:{mode:'code',repository,branch}}); await persistence.appendMessage({chatId,userId:user.id,role:'assistant',content:summary,metadata:{mode:'code',repository,branch,success:result.success,commitSha:result.commitSha??null}}) }
     return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider, testCommand: testCommand||null, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const detail = error instanceof Error ? error.message : ''

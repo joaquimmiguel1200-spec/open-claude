@@ -41,10 +41,18 @@ export async function POST(request: Request) {
       const name = String(body?.name ?? '').trim().slice(0, 120)
       const description = String(body?.description ?? '').trim().slice(0, 1000) || null
       if (!name) return NextResponse.json({ error: 'Nome do projeto é obrigatório.' }, { status: 400 })
-      const { data, error } = await supabase.from('projects').insert({ owner_id: user.id, name, description }).select('id,name,description,created_at,updated_at').single()
+      // Generate the ID before insertion so the INSERT does not use RETURNING.
+      // The projects RLS policy allows the owner to SELECT the row after the owner-membership trigger runs.
+      const projectId = crypto.randomUUID()
+      const { error } = await supabase.from('projects').insert({ id: projectId, owner_id: user.id, name, description })
       if (error) {
         console.error('[workspace] project creation failed', { code: error.code, message: error.message })
         return NextResponse.json({ error: error.message || 'O banco recusou a criação do projeto.', code: error.code ?? null, hint: error.hint ?? null }, { status: error.code === '42501' ? 403 : 400, headers: { 'Cache-Control': 'no-store' } })
+      }
+      const { data, error: readError } = await supabase.from('projects').select('id,name,description,created_at,updated_at').eq('id', projectId).eq('owner_id', user.id).single()
+      if (readError || !data) {
+        console.error('[workspace] project inserted but could not be read', { code: readError?.code, message: readError?.message })
+        return NextResponse.json({ error: 'O projeto foi criado, mas não pôde ser carregado. Atualize a página.', code: readError?.code ?? null }, { status: 500, headers: { 'Cache-Control': 'no-store' } })
       }
       return NextResponse.json({ project: data }, { status: 201, headers: { 'Cache-Control': 'no-store' } })
     }

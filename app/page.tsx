@@ -10,7 +10,7 @@ export default function HomePage() {
  return <main className="landing shell">
   <nav className="nav landing-nav">
    <Link className="brand landing-brand" href="/"><img src="/open-claude-logo.svg" alt="Open Claude" width="196" height="54"/></Link>
-   <div className="nav-links"><Link href="#platform">Plataforma</Link><Link href="#models">Modelos</Link><Link href="#agents">Agentes</Link><Link href="/agents">Catálogo</Link><Link href="/privacy">Privacidade</Link><Link className="button secondary compact" href="/login">Entrar</Link><Link className="button glow compact" href="/signup">Solicitar acesso</Link></div>
+   <div className="nav-links"><Link href="#platform">Plataforma</Link><Link href="#models">Modelos</Link><Link href="#agents">Agentes</Link><Link className="button secondary compact" href="/login">Entrar</Link><Link className="button glow compact" href="/signup">Solicitar acesso</Link></div>
   </nav>
   <section className="hero landing-hero"><div className="hero-orbit" aria-hidden="true"/>
    <div className="hero-content"><p className="kicker">AI WORKSPACE · MODELOS · AGENTES · FERRAMENTAS · EXECUÇÃO</p><h1>Uma plataforma.<br/><span>Todo o trabalho conectado.</span></h1>

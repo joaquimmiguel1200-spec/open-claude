@@ -3,7 +3,7 @@ import { requireUser } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { user, supabase } = await requireUser()
     const [{ data: projects, error: projectsError }, { data: chats, error: chatsError }, { data: profile }] = await Promise.all([
@@ -13,6 +13,17 @@ export async function GET() {
     ])
     if (projectsError) throw new Error(projectsError.message)
     if (chatsError) throw new Error(chatsError.message)
+    const chatId = new URL(request.url).searchParams.get('chatId')
+    let messages: any[] = []
+    if (chatId) {
+      const { data: ownedChat, error: chatError } = await supabase.from('chats').select('id,metadata').eq('id', chatId).eq('owner_id', user.id).maybeSingle()
+      if (chatError) throw new Error(chatError.message)
+      if (!ownedChat) return NextResponse.json({ error: 'Conversa não encontrada ou não autorizada.' }, { status: 404 })
+      const { data: rows, error: messagesError } = await supabase.from('messages').select('id,role,content,metadata,created_at').eq('chat_id', chatId).eq('user_id', user.id).order('created_at', { ascending: true }).limit(200)
+      if (messagesError) throw new Error(messagesError.message)
+      messages = rows ?? []
+      return NextResponse.json({ messages, chat: ownedChat }, { headers: { 'Cache-Control': 'no-store' } })
+    }
     return NextResponse.json({ projects: projects ?? [], chats: chats ?? [], profile: profile ?? { display_name: user.email?.split('@')[0] ?? 'User', preferences: {} }, account: { email: user.email ?? null, role: user.app_metadata?.role === 'admin' ? 'admin' : 'user' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Não foi possível carregar o workspace.'

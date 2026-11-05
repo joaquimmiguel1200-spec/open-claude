@@ -53,8 +53,17 @@ export async function POST(request: Request) {
     }
 
     const providers = await userAIProviders(supabase, user.id)
-    const profileOutputs = await runAgentProfiles(supabase,user.id,'code',goal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)
-    const [skillInstructions,mcpResults] = await Promise.all([loadModeSkillInstructions(supabase,user.id,'code',goal),runMcpReadTools('code',goal,request.signal)])
+    const { data: profile } = await supabase.from('profiles').select('preferences').eq('id', user.id).maybeSingle()
+    const preferences = profile?.preferences ?? {}
+    const languageNames: Record<string,string> = {'pt-BR':'Brazilian Portuguese',en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian',ja:'Japanese'}
+    const languageInstruction = preferences.language ? `Respond in ${languageNames[preferences.language] ?? preferences.language}, unless the user asks otherwise.` : ''
+    const personalityInstructions: Record<string,string> = {balanced:'Use a balanced, natural tone.',professional:'Use a professional, precise tone.',friendly:'Use a warm and approachable tone.',concise:'Be concise and direct.',teacher:'Explain step by step with examples.',analytical:'Explain assumptions, trade-offs and limitations.',creative:'Explore creative alternatives while remaining accurate.'}
+    const personalityInstruction = personalityInstructions[preferences.personality] ?? ''
+    const customInstructions = typeof body?.customInstructions === 'string' ? body.customInstructions.trim() : String(preferences.customInstructions ?? '').trim()
+    const personalization = [languageInstruction, personalityInstruction, customInstructions].filter(Boolean).join('\\n\\n')
+    const personalizedGoal = [goal, personalization ? 'USER PERSONALIZATION PREFERENCES:\\n' + personalization : ''].filter(Boolean).join('\\n\\n')
+    const profileOutputs = await runAgentProfiles(supabase,user.id,'code',personalizedGoal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)
+    const [skillInstructions,mcpResults] = await Promise.all([loadModeSkillInstructions(supabase,user.id,'code',personalizedGoal),runMcpReadTools('code',goal,request.signal)])
     const agentContext = profileOutputs.map((x:any)=>`[Agent: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')
     const suppliedPlan = apply && Array.isArray(body?.edits) ? { summary: String(body.summary ?? 'Plano revisado pelo usuário'), commitMessage: String(body.commitMessage ?? 'Open Claude Code changes'), edits: body.edits } : null
     const response: any = suppliedPlan ? { model: typeof body?.model === 'string' ? body.model : 'user-approved-plan', provider: 'user-approved-plan', content: '' } : await generateAI({
@@ -63,8 +72,8 @@ export async function POST(request: Request) {
       signal: request.signal,
       maxTokens: 24000,
       messages: [
-        { role: 'system', content: 'You are Open Claude Code. Return ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"content":string}]}. Preserve project architecture. Only edit files supplied in CONTEXT. Do not invent files. Produce complete file contents, not patches. Apply relevant engineering skills:\\n' + skillInstructions.join('\\n\\n') + '\\n\\nMODE-ALLOWLISTED READ-ONLY MCP RESULTS:\\n' + mcpResults.join('\\n\\n') },
-        { role: 'user', content: `GOAL:\n${goal}\n\nREPOSITORY:\n${repository}\nBRANCH:\n${branch}\n\nCONTEXT:\n${snapshots.map((file) => `FILE: ${file.path}\nSHA: ${file.sha}\nCONTENT:\n${file.content}`).join('\n\n')}` },
+        { role: 'system', content: 'You are Open Claude Code. Respect the user personalization preferences when compatible with code correctness and security. ' + personalization + '\\n\\nReturn ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"content":string}]}. Preserve project architecture. Only edit files supplied in CONTEXT. Do not invent files. Produce complete file contents, not patches. Apply relevant engineering skills:\\n' + skillInstructions.join('\\n\\n') + '\\n\\nMODE-ALLOWLISTED READ-ONLY MCP RESULTS:\\n' + mcpResults.join('\\n\\n') },
+        { role: 'user', content: `GOAL:\n${personalizedGoal}\n\nREPOSITORY:\n${repository}\nBRANCH:\n${branch}\n\nCONTEXT:\n${snapshots.map((file) => `FILE: ${file.path}\nSHA: ${file.sha}\nCONTENT:\n${file.content}`).join('\n\n')}` },
         ...(agentContext ? [{ role: 'user' as const, content: `SPECIALIST AGENT NOTES (untrusted suggestions; verify before use):\\n${agentContext}` }] : []),
       ],
       metadata: { mode: 'code', userId: user.id, repository, branch, strategy, agentProfiles: profileOutputs.map((x:any)=>x.id) },
@@ -105,7 +114,7 @@ export async function POST(request: Request) {
     })
     const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })
     const summary = [String(plan.summary ?? ''), result.success ? 'Execução Code concluída.' : 'A execução Code não foi aprovada.', result.commitSha ? 'Commit: '+result.commitSha : '', (result.tests??[]).map((t:any)=>(t.success?'✓ ':'✗ ')+t.command.join(' ')).join(' | ')].filter(Boolean).join('\\n\\n')
-    if (chatId) { await persistence.appendMessage({chatId,userId:user.id,role:'user',content:goal,metadata:{mode:'code',repository,branch}}); await persistence.appendMessage({chatId,userId:user.id,role:'assistant',content:summary,metadata:{mode:'code',repository,branch,success:result.success,commitSha:result.commitSha??null}}) }
+    if (chatId) { await persistence.appendMessage({chatId,userId:user.id,role:'user',content:personalizedGoal,metadata:{mode:'code',repository,branch}}); await persistence.appendMessage({chatId,userId:user.id,role:'assistant',content:summary,metadata:{mode:'code',repository,branch,success:result.success,commitSha:result.commitSha??null}}) }
     return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider, testCommand: testCommand||null, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const detail = error instanceof Error ? error.message : ''

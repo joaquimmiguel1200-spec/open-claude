@@ -62,7 +62,9 @@ export async function POST(request: Request) {
     }
 
     if (action === 'preferences') {
-      const preferences = body?.preferences && typeof body.preferences === 'object' ? body.preferences : {}
+      const incomingPreferences = body?.preferences && typeof body.preferences === 'object' ? body.preferences : {}
+      const { data: existingProfile } = await supabase.from('profiles').select('preferences').eq('id', user.id).maybeSingle()
+      const preferences = { ...(existingProfile?.preferences ?? {}), ...incomingPreferences }
       const displayName = typeof body?.displayName === 'string' ? body.displayName.trim().slice(0, 120) : undefined
       const { data, error } = await supabase.from('profiles').upsert({ id: user.id, ...(displayName ? { display_name: displayName } : {}), preferences, updated_at: new Date().toISOString() }).select('display_name,avatar_url,preferences').single()
       if (error) throw new Error(error.message)

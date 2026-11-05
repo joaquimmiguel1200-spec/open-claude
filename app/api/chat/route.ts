@@ -65,7 +65,7 @@ export async function POST(request:Request){
   const languageInstruction=preferences.language?`RESPONSE LANGUAGE: Respond in ${languageNames[preferences.language]??preferences.language}, unless the user explicitly requests another language.`:null
   const personalityInstruction=preferences.personality?personalityInstructions[preferences.personality]??null:null
   const custom=parsed.data.customInstructions?.trim()||preferences.customInstructions?.trim()
-  const personalization=custom?`PERSONALIZATION INSTRUCTIONS (user preference; follow when compatible with safety and task requirements):\\n${custom}`:null
+  const personalization=custom?`PERSONALIZATION INSTRUCTIONS (user preference; follow when compatible with safety and task requirements):\n${custom}`:null
   const systemInstructions=[modeInstructions[mode],languageInstruction,personalityInstruction,personalization,...skillInstructions].filter(Boolean)
   const providers=await userAIProviders(supabase,user.id)
   const [profileOutputs,mcpResults]=await Promise.all([runAgentProfiles(supabase,user.id,mode,parsed.data.message,parsed.data.model,providers,request.signal),runMcpReadTools(mode,parsed.data.message,request.signal)])

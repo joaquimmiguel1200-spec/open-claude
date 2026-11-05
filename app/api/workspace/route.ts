@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   try {
     const { user, supabase } = await requireUser()
     const [{ data: projects, error: projectsError }, { data: chats, error: chatsError }, { data: profile }] = await Promise.all([
-      supabase.from('projects').select('id,name,description,settings,created_at,updated_at').eq('owner_id', user.id).order('updated_at', { ascending: false }),
+      supabase.from('projects').select('id,name,description,created_at,updated_at').eq('owner_id', user.id).order('updated_at', { ascending: false }),
       supabase.from('chats').select('id,project_id,title,model,metadata,created_at,updated_at').eq('owner_id', user.id).order('updated_at', { ascending: false }).limit(100),
       supabase.from('profiles').select('display_name,avatar_url,preferences').eq('id', user.id).maybeSingle(),
     ])
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const action = body?.action
 
     if (action === 'project') {
-      const name = String(body?.name ?? '').trim().slice(0, 200)
+      const name = String(body?.name ?? '').trim().slice(0, 120)
       const description = String(body?.description ?? '').trim().slice(0, 1000) || null
       if (!name) return NextResponse.json({ error: 'Nome do projeto é obrigatório.' }, { status: 400 })
       const { data, error } = await supabase.from('projects').insert({ owner_id: user.id, name, description }).select('id,name,description,settings,created_at,updated_at').single()

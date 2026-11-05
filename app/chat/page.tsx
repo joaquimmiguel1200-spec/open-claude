@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 
 type Mode = 'chat' | 'code' | 'cowork'
 type Project = { id: string; name: string; description?: string | null }
-type Chat = { id: string; project_id?: string | null; title?: string | null; model?: string | null; created_at: string; updated_at: string }
+type Chat = { id: string; project_id?: string | null; title?: string | null; model?: string | null; metadata?: Record<string,any> | null; created_at: string; updated_at: string }
 type MenuItem = { id: string; label: string; icon: string }
 const menuGroups: Array<{label:string;items:MenuItem[]}> = [
  {label:'TRABALHO',items:[{id:'chats',label:'Conversas',icon:'◌'},{id:'projects',label:'Projetos',icon:'◇'},{id:'artifacts',label:'Artefatos',icon:'✦'}]},
@@ -45,9 +45,9 @@ export default function ChatPage() {
         if(!codeRepository.match(/^[^/\s]+\/[^/\s]+$/)){setAnswer('No modo Code, informe o repositório no formato owner/repository.');return}
         if(!paths.length){setAnswer('No modo Code, informe pelo menos um arquivo em Caminhos.');return}
         if(!codeTestCommand.trim()){setAnswer('Antes de aplicar alterações no GitHub, informe um comando de teste para a sandbox (por exemplo, npm test).');return}
-        const res=await fetch('/api/code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({goal:message,repository:codeRepository,branch:codeBranch||'main',paths,model:model||undefined,apply:true,testCommand:codeTestCommand.trim()||undefined}),signal:requestController.signal});
+        const submitted=message.trim();setConversationMessages(current=>[...current,{role:'user',content:submitted}]);const res=await fetch('/api/code',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({goal:submitted,chatId:activeChatId,projectId:projectId||undefined,repository:codeRepository,branch:codeBranch||'main',paths,model:model||undefined,apply:true,testCommand:codeTestCommand.trim()||undefined}),signal:requestController.signal});
         const data=await res.json().catch(()=>({}));
-        if(!res.ok){setAnswer(data.error||'O Code Agent não conseguiu concluir a alteração.');return}
+        if(!res.ok){setAnswer(data.error||'O Code Agent não conseguiu concluir a alteração.');setConversationMessages(current=>[...current,{role:'user',content:submitted},{role:'assistant',content:data.error||'O Code Agent não conseguiu concluir a alteração.'}]);return}
         const tests=(data.result?.tests??[]).map((t:any)=>(t.success?'✓ ':'✗ ')+t.command.join(' ')).join(' | ');
         const report=[data.summary||'Alteração concluída.',data.result?.commitSha?'Commit: '+data.result.commitSha:'',tests?'Testes: '+tests:''].filter(Boolean).join('\n\n');setAnswer(report);setConversationMessages(current=>[...current,{role:'user',content:message},{role:'assistant',content:report}]);
         setMessage(''); loadWorkspace(); return
@@ -60,11 +60,11 @@ export default function ChatPage() {
         setAnswer(report);setConversationMessages(current=>[...current,{role:'assistant',content:report}]);setMessage('');loadWorkspace();return
       }
       const res=await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json',accept:'text/event-stream'},body:JSON.stringify({message,chatId:activeChatId,projectId:projectId||undefined,mode,model:model||undefined,customInstructions,honeypot:'',stream:true}),signal:requestController.signal});
-      if(!res.ok){const data=await res.json().catch(()=>({}));setAnswer(data.error||'Não foi possível processar a solicitação.');return}
+      if(!res.ok){const data=await res.json().catch(()=>({}));setAnswer(data.error||'Não foi possível processar a solicitação.');setConversationMessages(current=>[...current,{role:'user',content:message.trim()},{role:'assistant',content:data.error||'Não foi possível processar a solicitação.'}]);return}
       if(!res.body){setAnswer('Sem resposta do servidor.');return}
-      const reader=res.body.getReader(),decoder=new TextDecoder(); let buffer='';
-      while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const frames=buffer.split('\n\n');buffer=frames.pop()||'';for(const frame of frames){const line=frame.split('\n').find(x=>x.startsWith('data: '));if(!line)continue;try{const event=JSON.parse(line.slice(6));if(event.type==='delta')setAnswer(c=>c+(event.delta||''));if(event.type==='error')setAnswer(c=>c||event.error?.message||'Erro no modelo.')}catch{}}}
-      setConversationMessages(current=>[...current,{role:'assistant',content:answer||'Resposta concluída.'}]);setMessage(''); loadWorkspace()
+      const reader=res.body.getReader(),decoder=new TextDecoder(); let buffer='',assistantContent='';setConversationMessages(current=>[...current,{role:'user',content:message.trim()}]);
+      while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const frames=buffer.split('\n\n');buffer=frames.pop()||'';for(const frame of frames){const line=frame.split('\n').find(x=>x.startsWith('data: '));if(!line)continue;try{const event=JSON.parse(line.slice(6));if(event.type==='delta'){assistantContent+=event.delta||'';setAnswer(assistantContent)}if(event.type==='error'){assistantContent=assistantContent||event.error?.message||'Erro no modelo.';setAnswer(assistantContent)}}catch{}}}
+      if(assistantContent)setConversationMessages(current=>[...current,{role:'assistant',content:assistantContent}]);setMessage(''); loadWorkspace()
     }catch(error){setAnswer(requestController.signal.aborted?'Geração interrompida.':'Erro de conexão.')}finally{setLoading(false);setActiveRequest(null)}
   }
   async function runTerminalCommand(){if(!terminalCommand.trim()||terminalBusy)return;setTerminalBusy(true);try{const response=await fetch('/api/code/terminal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({command:terminalCommand,repository:codeRepository,branch:codeBranch,paths:codePaths.split(',').map(x=>x.trim()).filter(Boolean)})});const data=await response.json().catch(()=>({}));setTerminalOutput(current=>[current,`$ ${terminalCommand}`,data.stdout||'',data.stderr||data.error||'',data.note||''].filter(Boolean).join('\\n').slice(-12000));}catch{setTerminalOutput(current=>current+'\\nFalha de conexão com o terminal.')}finally{setTerminalBusy(false)}}

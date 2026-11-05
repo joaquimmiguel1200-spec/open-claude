@@ -113,8 +113,8 @@ export async function POST(request: Request) {
       }
     })
     const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })
-    const summary = [String(plan.summary ?? ''), result.success ? 'Execução Code concluída.' : 'A execução Code não foi aprovada.', result.commitSha ? 'Commit: '+result.commitSha : '', (result.tests??[]).map((t:any)=>(t.success?'✓ ':'✗ ')+t.command.join(' ')).join(' | ')].filter(Boolean).join('\\n\\n')
-    if (chatId) { await persistence.appendMessage({chatId,userId:user.id,role:'user',content:personalizedGoal,metadata:{mode:'code',repository,branch}}); await persistence.appendMessage({chatId,userId:user.id,role:'assistant',content:summary,metadata:{mode:'code',repository,branch,success:result.success,commitSha:result.commitSha??null}}) }
+    const summary = [String(plan.summary ?? ''), result.success ? 'Execução Code concluída.' : 'A execução Code não foi aprovada.', result.commitSha ? 'Commit: '+result.commitSha : '', (result.tests??[]).map((t:any)=>(t.success?'✓ ':'✗ ')+t.command.join(' ')).join(' | ')].filter(Boolean).join('\n\n')
+    if (chatId) { await persistence.appendMessage({chatId,userId:user.id,role:'user',content:goal,metadata:{mode:'code',repository,branch}}); await persistence.appendMessage({chatId,userId:user.id,role:'assistant',content:summary,metadata:{mode:'code',repository,branch,success:result.success,commitSha:result.commitSha??null}}) }
     return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider, testCommand: testCommand||null, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const detail = error instanceof Error ? error.message : ''

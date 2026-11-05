@@ -24,16 +24,15 @@ export default function AdminConnectorsPage(){
  function toggleMode(mode:string){setModes(current=>current.includes(mode)?current.filter(x=>x!==mode):[...current,mode])}
  function generate(){
   setError('');setOutput('')
-  const cleanId=(id||name).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-|-$/g,'').slice(0,48)
+  const cleanId=(id||name).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-|-$/g,'').slice(0,48)
   let parsed:URL
   try{parsed=new URL(url)}catch{setError('Informe uma URL MCP válida.');return}
   if(parsed.protocol!=='https:'){setError('Em produção, o servidor MCP precisa usar HTTPS.');return}
   if(!name.trim()||!cleanId||!modes.length){setError('Informe nome, identificador e pelo menos um modo.');return}
-  if(!token.trim()){setError('Informe o token do servidor ou selecione um servidor sem token.');return}
   const envName='MCP_'+cleanId.toUpperCase().replace(/-/g,'_')+'_TOKEN'
-  const server={id:cleanId,name:name.trim(),url:parsed.toString(),tokenEnv:envName,enabled:true,modes}
+  const server={id:cleanId,name:name.trim(),url:parsed.toString(),...(token.trim()?{tokenEnv:envName}:{}),enabled:true,modes}
   const json=JSON.stringify([server],null,2)
-  setOutput('MCP_SERVERS_JSON='+json+'\\n'+envName+'='+token.trim())
+  setOutput('MCP_SERVERS_JSON='+json+(token.trim()?'\\n'+envName+'='+token.trim():''))
  }
  async function copy(){if(!output)return;try{await navigator.clipboard.writeText(output);setError('Configuração copiada. Adicione as duas variáveis no Vercel → Settings → Environment Variables e faça novo deploy.')}catch{setError('Não foi possível copiar automaticamente. Selecione o texto e copie manualmente.')}}
  return <main className="shell" style={{maxWidth:1120,paddingTop:32,paddingBottom:60}}>

@@ -4,6 +4,7 @@ import catalogManifest from '@/lib/agents/catalog.json'
 
 type Agent = { id: string; name: string; category: string; source: string; repository: string; path: string; url: string; description: string; instructions?: string }
 type Source = { repository: string; available: boolean; count: number }
+type AgentProfile = { id: string; name: string; enabled: boolean; modes: string[] }
 const FALLBACK_AGENTS: Agent[] = [
 ['full-stack','Engenheiro Full Stack','Engenharia','Implementação ponta a ponta, arquitetura e validação.','Atue como engenheiro full stack sênior. Entenda o objetivo e o código, planeje etapas pequenas, implemente com segurança e valide testes/build. Nunca declare testes não executados.'],
 ['frontend','Especialista Frontend','Design e Frontend','Interfaces responsivas, acessíveis e reutilizáveis.','Priorize UX mobile, acessibilidade, estados de carregamento/erro/vazio, componentes reutilizáveis e design system. Valide interações.'],
@@ -44,10 +45,18 @@ export default function AgentsPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [error, setError] = useState('')
   const [enabled, setEnabled] = useState<string[]>([])
+  const [profiles, setProfiles] = useState<AgentProfile[]>([])
+  const [toggleBusy, setToggleBusy] = useState(false)
   const [visibleCount, setVisibleCount] = useState(40)
   useEffect(() => {
-    try { const saved = window.localStorage.getItem('open-claude-enabled-agents'); if (saved) setEnabled(JSON.parse(saved)) } catch {}
     ;(async () => {
+      try {
+        const profileResponse = await fetch('/api/agents/profiles', { cache: 'no-store' })
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json()
+          setProfiles(Array.isArray(profileData.agents) ? profileData.agents : [])
+        }
+      } catch {}
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 15000)
       try {
@@ -82,11 +91,53 @@ export default function AgentsPage() {
       }
     })()
   }, [])
+  useEffect(() => {
+    const activeNames = new Set(profiles.filter(profile => profile.enabled).map(profile => profile.name.toLowerCase()))
+    setEnabled(agents.filter(agent => activeNames.has(agent.name.toLowerCase())).map(agent => agent.id))
+  }, [agents, profiles])
   const categories = useMemo(() => ['Todas', ...Array.from(new Set(agents.map(a => a.category))).sort()], [agents])
   const filtered = useMemo(() => agents.filter(a => (category === 'Todas' || a.category === category) && (a.name + ' ' + a.category + ' ' + a.description + ' ' + a.repository).toLowerCase().includes(query.toLowerCase())), [agents, category, query])
   const visibleAgents = filtered.slice(0, visibleCount)
   useEffect(() => { setVisibleCount(40) }, [query, category])
-  function toggle(agent: Agent) { const next = enabled.includes(agent.id) ? enabled.filter(x => x !== agent.id) : [...enabled, agent.id]; setEnabled(next); try { window.localStorage.setItem('open-claude-enabled-agents', JSON.stringify(next)) } catch {} }
+  async function toggle(agent: Agent) {
+    if (toggleBusy) return
+    setToggleBusy(true)
+    setError('')
+    try {
+      const existing = profiles.find(profile => profile.name.toLowerCase() === agent.name.toLowerCase())
+      if (existing) {
+        const response = await fetch('/api/agents/profiles', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: existing.id, enabled: !existing.enabled }) })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data.error || 'Não foi possível atualizar o agente.')
+      } else {
+        let content = agent.instructions ?? ''
+        if (!content && agent.repository !== 'open-claude/built-in') {
+          const response = await fetch('/api/agents/content?repository=' + encodeURIComponent(agent.repository) + '&path=' + encodeURIComponent(agent.path), { cache: 'no-store' })
+          const data = await response.json().catch(() => ({}))
+          if (!response.ok) throw new Error(data.error || 'Não foi possível carregar as instruções do agente.')
+          content = String(data.instructions ?? '')
+        }
+        if (!content.trim()) throw new Error('Este agente ainda não possui instruções disponíveis.')
+        const codeFocused = /engineering|engineer|developer|software|devops|security|database|quality|testing|frontend|backend|design|architecture|programming|code/i.test(agent.category + ' ' + agent.name)
+        const modes = codeFocused ? ['code', 'cowork'] : ['chat', 'cowork']
+        const response = await fetch('/api/agents/profiles', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ source: 'catalog', catalogId: agent.id, repository: agent.repository, path: agent.path, name: agent.name, description: agent.description, instructions: content.slice(0, 20_000), modes }),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data.error || 'Não foi possível ativar o agente.')
+      }
+      const refreshed = await fetch('/api/agents/profiles', { cache: 'no-store' })
+      const profileData = await refreshed.json().catch(() => ({}))
+      if (!refreshed.ok) throw new Error(profileData.error || 'Não foi possível atualizar a lista de agentes.')
+      setProfiles(Array.isArray(profileData.agents) ? profileData.agents : [])
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Falha ao ativar o agente.')
+    } finally {
+      setToggleBusy(false)
+    }
+  }
   async function openAgent(agent: Agent) { setSelected(agent); setInstructions(agent.instructions ?? ''); setError(''); if (agent.instructions) { setDetailLoading(false); return } setDetailLoading(true); const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000); try { const response = await fetch('/api/agents/content?repository=' + encodeURIComponent(agent.repository) + '&path=' + encodeURIComponent(agent.path),{signal:controller.signal,cache:'no-store'}); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Falha ao carregar instruções'); setInstructions(data.instructions ?? '') } catch (e) { setError(e instanceof Error&&e.name==='AbortError'?'O carregamento das instruções demorou demais. Tente novamente.':e instanceof Error ? e.message : 'Falha ao carregar agente') } finally { clearTimeout(timer);setDetailLoading(false) } }
   function useAgent() { if (!selected || !instructions || !task.trim()) return; try { window.localStorage.setItem('open-claude-agent-context', JSON.stringify({ name: selected.name, instructions })) } catch { setError('Não foi possível preparar o contexto do agente neste navegador.'); return } window.location.href = '/chat?agent=1&task=' + encodeURIComponent(task.trim()) }
   return <main className="shell" style={{maxWidth:1440,margin:'0 auto',padding:24,minHeight:'100vh'}}>
@@ -94,12 +145,12 @@ export default function AgentsPage() {
     <header style={{padding:'28px 0 22px'}}><p className="muted" style={{letterSpacing:'.16em',fontSize:11}}>AGENT WORKSPACE</p><h1 style={{fontSize:36,margin:'8px 0'}}>Agentes</h1><p className="muted" style={{maxWidth:760,lineHeight:1.7}}>Catálogo versionado com 535 agentes: 20 integrados ao Open Claude e 515 importados de quatro repositórios públicos. A lista é carregada localmente e não depende da resposta da API para aparecer.</p><div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:16}}><div className="card"><strong>{agents.length}</strong><p className="muted">Agentes catalogados</p></div><div className="card"><strong>{enabled.length}</strong><p className="muted">Agentes selecionados</p></div><div className="card"><strong>{categories.length-1}</strong><p className="muted">Divisões catalogadas</p></div></div></header>
     {error && <p role="alert" style={{color:'#ff8b8b'}}>{error}</p>}
     <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr)',gap:16}}><div style={{display:'flex',gap:10,flexWrap:'wrap'}}><input aria-label="Buscar agentes" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar agente, especialidade ou repositório…" style={{flex:'1 1 280px',minWidth:0}}/><select aria-label="Filtrar divisão" value={category} onChange={e=>setCategory(e.target.value)} style={{flex:'0 1 240px'}}>{categories.map(c=><option key={c}>{c}</option>)}</select></div>
-    <div className="muted" style={{fontSize:12}}>Ativar um agente salva sua seleção neste navegador; zero selecionados não significa que o catálogo esteja vazio.</div><div className="muted" style={{fontSize:12}}>{loading?`${filtered.length} agentes disponíveis · atualizando fontes externas…`:`${filtered.length} de ${agents.length} agentes`}</div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,270px),1fr))',gap:12}}>{visibleAgents.map(agent=><article className="card" key={agent.id} style={{display:'flex',flexDirection:'column',gap:10}}><div style={{display:'flex',justifyContent:'space-between',gap:8,alignItems:'start'}}><span className="muted" style={{fontSize:10}}>{agent.category}</span><button className={enabled.includes(agent.id)?'button':'button secondary'} onClick={()=>toggle(agent)}>{enabled.includes(agent.id)?'Ativado':'Ativar'}</button></div><h3 style={{margin:0,fontSize:16}}>{agent.name}</h3><p className="muted" style={{fontSize:12,lineHeight:1.5,flex:1}}>{agent.description}</p><small className="muted">{agent.source}</small><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="button secondary" onClick={()=>openAgent(agent)}>Ver instruções</button>{agent.url && <a className="muted" href={agent.url} target="_blank" rel="noreferrer" style={{alignSelf:'center',fontSize:12}}>Fonte ↗</a>}</div></article>)}</div>
+    <div className="muted" style={{fontSize:12}}>Ativar um agente importa suas instruções e salva o perfil no Supabase. Ele passa a ser considerado automaticamente nos modos compatíveis.</div><div className="muted" style={{fontSize:12}}>{loading?`${filtered.length} agentes disponíveis · atualizando fontes externas…`:`${filtered.length} de ${agents.length} agentes`}</div>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,270px),1fr))',gap:12}}>{visibleAgents.map(agent=><article className="card" key={agent.id} style={{display:'flex',flexDirection:'column',gap:10}}><div style={{display:'flex',justifyContent:'space-between',gap:8,alignItems:'start'}}><span className="muted" style={{fontSize:10}}>{agent.category}</span><button className={enabled.includes(agent.id)?'button':'button secondary'} onClick={()=>void toggle(agent)} disabled={toggleBusy}>{enabled.includes(agent.id)?'Ativado':'Ativar'}</button></div><h3 style={{margin:0,fontSize:16}}>{agent.name}</h3><p className="muted" style={{fontSize:12,lineHeight:1.5,flex:1}}>{agent.description}</p><small className="muted">{agent.source}</small><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="button secondary" onClick={()=>openAgent(agent)}>Ver instruções</button>{agent.url && <a className="muted" href={agent.url} target="_blank" rel="noreferrer" style={{alignSelf:'center',fontSize:12}}>Fonte ↗</a>}</div></article>)}</div>
     {filtered.length>visibleCount&&<div style={{display:'flex',justifyContent:'center',padding:'18px 0'}}><button className="button secondary" onClick={()=>setVisibleCount(count=>Math.min(count+40,filtered.length))}>Carregar mais agentes ({Math.min(40,filtered.length-visibleCount)} próximos)</button></div>}
     {!loading && !agents.length && <div className="card">Nenhum agente corresponde aos filtros. Limpe a busca ou selecione “Todas”.</div>}
     <section className="card" style={{marginTop:8}}><h2 style={{marginTop:0}}>Repositórios conectados</h2>{sources.map(s=><p key={s.repository} className="muted" style={{fontSize:12}}>{s.available?'✓':'!'} <a href={'https://github.com/'+s.repository} target="_blank" rel="noreferrer">{s.repository}</a> · {s.count} agentes</p>)}<p className="muted" style={{fontSize:11}}>O catálogo mantém uma lista versionada dos agentes e carrega as instruções completas sob demanda. Ativar um agente não executa código nem concede permissões de ferramenta por si só.</p></section>
     </div>
-    {selected && <div role="dialog" aria-modal="true" aria-label={'Agente '+selected.name} style={{position:'fixed',inset:0,zIndex:50,background:'#000b',display:'grid',placeItems:'center',padding:16}}><section className="card" style={{width:'min(900px,100%)',maxHeight:'90vh',overflow:'auto',background:'#111116',border:'1px solid #333',padding:22}}><div style={{display:'flex',justifyContent:'space-between',gap:12}}><div><p className="muted" style={{fontSize:11}}>{selected.category} · {selected.repository}</p><h2 style={{marginTop:4}}>{selected.name}</h2></div><button className="button secondary" onClick={()=>setSelected(null)}>Fechar</button></div>{detailLoading?<p className="muted">Carregando instruções do repositório…</p>:<><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:12,lineHeight:1.6,maxHeight:330,overflow:'auto',padding:14,background:'#09090c',borderRadius:8}}>{instructions || 'Sem instruções disponíveis.'}</pre><label style={{display:'block',marginTop:16}}>Qual tarefa este agente deve executar?<textarea value={task} onChange={e=>setTask(e.target.value)} placeholder="Descreva o resultado que você quer…" rows={4} style={{width:'100%',marginTop:8}}/></label><div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginTop:12}}><button className="button secondary" onClick={()=>toggle(selected)}>{enabled.includes(selected.id)?'Desativar agente':'Ativar agente'}</button><button className="button" disabled={!instructions||!task.trim()} onClick={useAgent}>Usar agente no Chat →</button></div></>}</section></div>}
+    {selected && <div role="dialog" aria-modal="true" aria-label={'Agente '+selected.name} style={{position:'fixed',inset:0,zIndex:50,background:'#000b',display:'grid',placeItems:'center',padding:16}}><section className="card" style={{width:'min(900px,100%)',maxHeight:'90vh',overflow:'auto',background:'#111116',border:'1px solid #333',padding:22}}><div style={{display:'flex',justifyContent:'space-between',gap:12}}><div><p className="muted" style={{fontSize:11}}>{selected.category} · {selected.repository}</p><h2 style={{marginTop:4}}>{selected.name}</h2></div><button className="button secondary" onClick={()=>setSelected(null)}>Fechar</button></div>{detailLoading?<p className="muted">Carregando instruções do repositório…</p>:<><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:12,lineHeight:1.6,maxHeight:330,overflow:'auto',padding:14,background:'#09090c',borderRadius:8}}>{instructions || 'Sem instruções disponíveis.'}</pre><label style={{display:'block',marginTop:16}}>Qual tarefa este agente deve executar?<textarea value={task} onChange={e=>setTask(e.target.value)} placeholder="Descreva o resultado que você quer…" rows={4} style={{width:'100%',marginTop:8}}/></label><div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap',marginTop:12}}><button className="button secondary" onClick={()=>void toggle(selected)} disabled={toggleBusy}>{enabled.includes(selected.id)?'Desativar agente':'Ativar agente'}</button><button className="button" disabled={!instructions||!task.trim()} onClick={useAgent}>Usar agente no Chat →</button></div></>}</section></div>}
   </main>
 }

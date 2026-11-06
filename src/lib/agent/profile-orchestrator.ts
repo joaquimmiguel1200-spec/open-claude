@@ -24,14 +24,26 @@ export async function runAgentProfiles(
   try {
     const result = await supabase.from('agent_profiles')
       .select('id,name,description,instructions,model_id,modes')
-      .eq('user_id', userId).eq('enabled', true).order('created_at', { ascending: true }).limit(12)
+      .eq('user_id', userId).eq('enabled', true).order('created_at', { ascending: true }).limit(100)
     if (result.error) throw result.error
     data = result.data as AgentProfile[]
   } catch (error) {
     console.warn('[agent-orchestrator] profile registry unavailable; using primary model only', { code: (error as any)?.code ?? 'unknown' })
     return []
   }
-  const active = (data ?? []).filter((profile: AgentProfile) => (profile.modes ?? []).includes(mode)).slice(0, 3)
+  const modeProfiles = (data ?? []).filter((profile: AgentProfile) => (profile.modes ?? []).includes(mode))
+  const normalizeTokens = (value: string) => value.toLowerCase().normalize('NFKD').split('').filter((character) => {
+    const code = character.charCodeAt(0)
+    return code < 768 || code > 879
+  }).join('')
+  const goalTokens = new Set(normalizeTokens(goal).match(/[a-z0-9]{3,}/g) ?? [])
+  const ranked = modeProfiles.map((profile) => {
+    const tokens = new Set(normalizeTokens(`${profile.name} ${profile.description}`).match(/[a-z0-9]{3,}/g) ?? [])
+    const score = [...tokens].reduce((total, token) => total + (goalTokens.has(token) ? 1 : 0), 0)
+    return { profile, score }
+  }).sort((a, b) => b.score - a.score)
+  const relevant = ranked.filter((entry) => entry.score > 0).slice(0, 3)
+  const active = (relevant.length ? relevant : ranked.slice(0, 1)).map((entry) => entry.profile)
   const results = await Promise.all(active.map(async (profile: AgentProfile) => {
     const run = (model?: string) => generateAI({
       model,

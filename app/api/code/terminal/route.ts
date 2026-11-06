@@ -19,18 +19,18 @@ export async function POST(request: Request) {
     const repository = String(body.repository ?? '').trim()
     const branch = String(body.branch ?? 'main').trim()
     const paths = Array.isArray(body.paths) ? body.paths.map((value: unknown) => String(value).trim()).filter(Boolean).slice(0, 20) : []
-    if (repository.split('/').length !== 2 || !repository || /\s/.test(repository)) return NextResponse.json({ error: 'Informe um repositório no formato owner/repository.' }, { status: 400 })
+    const [owner, repoName] = repository.split('/')
+    if (!owner || !repoName || /\s/.test(repository) || /[?#]/.test(repository)) return NextResponse.json({ error: 'Informe um repositório no formato owner/repository.' }, { status: 400 })
     if (!branch || branch.length > 100 || /[^A-Za-z0-9._/-]/.test(branch) || branch.split('/').includes('..')) return NextResponse.json({ error: 'Branch inválida.' }, { status: 400 })
     if (paths.some((path: string) => !path || path.length > 240 || path.startsWith('/') || path.split('/').some((part) => !part || part === '..') || path.startsWith('.git/'))) {
       return NextResponse.json({ error: 'Lista de arquivos inválida.' }, { status: 400 })
     }
 
-    const [owner, repo] = repository.split('/')
     const github = await createGitHubClientForUser(supabase, user.id)
     const files = []
     let totalBytes = 0
     for (const path of paths) {
-      const file = await github.getFile(owner, repo, path, branch, request.signal)
+      const file = await github.getFile(owner, repoName, path, branch, request.signal)
       totalBytes += Buffer.byteLength(file.content, 'utf8')
       if (totalBytes > 1_500_000) return NextResponse.json({ error: 'Os arquivos selecionados excedem o limite de 1,5 MB do terminal.' }, { status: 413 })
       files.push({ path: file.path, content: file.content })

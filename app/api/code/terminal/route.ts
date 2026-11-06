@@ -19,8 +19,9 @@ export async function POST(request: Request) {
     const repository = String(body.repository ?? '').trim()
     const branch = String(body.branch ?? 'main').trim()
     const paths = Array.isArray(body.paths) ? body.paths.map((value: unknown) => String(value).trim()).filter(Boolean).slice(0, 20) : []
-    const [owner, repoName] = repository.split('/')
-    if (!owner || !repoName || /\s/.test(repository) || /[?#]/.test(repository)) return NextResponse.json({ error: 'Informe um repositório no formato owner/repository.' }, { status: 400 })
+    const repositoryParts = repository.split('/')
+    const [owner, repoName] = repositoryParts
+    if (repositoryParts.length !== 2 || !owner || !repoName || /\s/.test(repository) || /[?#]/.test(repository)) return NextResponse.json({ error: 'Informe um repositório no formato owner/repository.' }, { status: 400 })
     if (!branch || branch.length > 100 || /[^A-Za-z0-9._/-]/.test(branch) || branch.split('/').includes('..')) return NextResponse.json({ error: 'Branch inválida.' }, { status: 400 })
     if (paths.some((path: string) => !path || path.length > 240 || path.startsWith('/') || path.split('/').some((part) => !part || part === '..') || path.startsWith('.git/'))) {
       return NextResponse.json({ error: 'Lista de arquivos inválida.' }, { status: 400 })

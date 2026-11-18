@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "audit": "npm audit --audit-level=high"
+    "audit": "npm audit --audit-level=high",
+    "test": "node --test scripts/*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

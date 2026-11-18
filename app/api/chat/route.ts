@@ -60,7 +60,8 @@ export async function POST(request:Request){
   const ragResults=await persistence.searchChunks(user.id,parsed.data.message,8)
   const mode=parsed.data.mode??'chat'
   const [{data:profilePreferences},{data:projectRow}]=await Promise.all([supabase.from('profiles').select('preferences').eq('id',user.id).maybeSingle(),chat.project_id?supabase.from('projects').select('settings').eq('id',chat.project_id).eq('owner_id',user.id).maybeSingle():Promise.resolve({data:null})])
-  const projectSettings=projectRow?.settings??{}\n  const skillInstructions=mode==='chat'?await activeSkillInstructions(supabase,user.id,parsed.data.message,Array.isArray(projectSettings.selectedSkillIds)?projectSettings.selectedSkillIds:undefined):await loadModeSkillInstructions(supabase,user.id,mode,parsed.data.message)
+  const projectSettings=projectRow?.settings??{}
+  const skillInstructions=mode==='chat'?await activeSkillInstructions(supabase,user.id,parsed.data.message,Array.isArray(projectSettings.selectedSkillIds)?projectSettings.selectedSkillIds:undefined):await loadModeSkillInstructions(supabase,user.id,mode,parsed.data.message)
   const preferences=profilePreferences?.preferences??{}
   const languageNames={'pt-BR':'Brazilian Portuguese','en':'English','es':'Spanish','fr':'French','de':'German','it':'Italian','ja':'Japanese'} as Record<string,string>
   const personalityInstructions={balanced:'Use a balanced, natural and adaptive tone.',professional:'Use a professional, precise and well-structured tone.',friendly:'Use a warm, approachable and friendly tone.',concise:'Be concise and direct; avoid unnecessary preambles.',teacher:'Teach step by step, define technical terms and use examples.',analytical:'Analyze assumptions, evidence, trade-offs and limitations in depth.',creative:'Explore original ideas and alternatives while preserving factual accuracy.'} as Record<string,string>

@@ -9,6 +9,7 @@ export type AgentProfile = {
   instructions: string
   model_id: string | null
   modes: string[]
+  metadata?: Record<string, any> | null
 }
 
 export async function runAgentProfiles(
@@ -23,7 +24,7 @@ export async function runAgentProfiles(
   let data: AgentProfile[] | null = null
   try {
     const result = await supabase.from('agent_profiles')
-      .select('id,name,description,instructions,model_id,modes')
+      .select('id,name,description,instructions,model_id,modes,metadata')
       .eq('user_id', userId).eq('enabled', true).order('created_at', { ascending: true }).limit(100)
     if (result.error) throw result.error
     data = result.data as AgentProfile[]
@@ -31,7 +32,7 @@ export async function runAgentProfiles(
     console.warn('[agent-orchestrator] profile registry unavailable; using primary model only', { code: (error as any)?.code ?? 'unknown' })
     return []
   }
-  const modeProfiles = (data ?? []).filter((profile: AgentProfile) => (profile.modes ?? []).includes(mode))
+  if (mode !== 'chat') return []\n  const allowed = Array.isArray(allowedCatalogIds) ? new Set(allowedCatalogIds) : null\n  const modeProfiles = (data ?? []).filter((profile: AgentProfile) => (profile.modes ?? []).includes('chat') && (!allowed || !profile.metadata?.catalogId || allowed.has(String(profile.metadata.catalogId))))
   const normalizeTokens = (value: string) => value.toLowerCase().normalize('NFKD').split('').filter((character) => {
     const code = character.charCodeAt(0)
     return code < 768 || code > 879

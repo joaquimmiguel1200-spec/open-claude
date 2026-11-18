@@ -2,13 +2,13 @@
   "id": "/",
   "name": "Open Claude",
   "short_name": "Open Claude",
-  "description": "Seu agente de IA pessoal",
+  "description": "Seu AI workspace completo",
   "lang": "pt-BR",
   "start_url": "/chat",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#101316",
-  "theme_color": "#101316",
+  "background_color": "#090b18",
+  "theme_color": "#090b18",
   "orientation": "any",
   "icons": [
     {

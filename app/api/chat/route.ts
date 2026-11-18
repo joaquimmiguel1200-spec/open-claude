@@ -31,7 +31,8 @@ async function activeSkillInstructions(supabase:any,userId:string,query:string,s
   if(!skills?.length)return []
   const {data:overrides}=await supabase.from('user_skills').select('skill_id,enabled').eq('user_id',userId)
   const disabled=new Set((overrides??[]).filter((x:any)=>x.enabled===false).map((x:any)=>x.skill_id))
-  const selected=Array.isArray(selectedSkillIds)?new Set(selectedSkillIds):null\n  const active=skills.filter((s:any)=>!disabled.has(s.id)&&(!selected||selected.has(s.id)))
+  const selected=Array.isArray(selectedSkillIds)?new Set(selectedSkillIds):null
+  const active=skills.filter((s:any)=>!disabled.has(s.id)&&(!selected||selected.has(s.id)))
   const matches=matchSkills(active.map((s:any)=>({...s,source:s.owner_id?'user':'builtin'})),query,Math.min(active.length,8))
   return matches.map(x=>`SKILL: ${x.skill.name}\nDESCRIPTION: ${x.skill.description}\nINSTRUCTIONS:\n${x.skill.instructions}`)
 }
@@ -58,7 +59,8 @@ export async function POST(request:Request){
   const memories=await retrieveMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,text:parsed.data.message,limit:12},persistence.memoryStore)
   const ragResults=await persistence.searchChunks(user.id,parsed.data.message,8)
   const mode=parsed.data.mode??'chat'
-  const [{data:profilePreferences},{data:projectRow}]=await Promise.all([supabase.from('profiles').select('preferences').eq('id',user.id).maybeSingle(),chat.project_id?supabase.from('projects').select('settings').eq('id',chat.project_id).eq('owner_id',user.id).maybeSingle():Promise.resolve({data:null})])\n  const projectSettings=projectRow?.settings??{}\n  const skillInstructions=mode==='chat'?await activeSkillInstructions(supabase,user.id,parsed.data.message,Array.isArray(projectSettings.selectedSkillIds)?projectSettings.selectedSkillIds:undefined):await loadModeSkillInstructions(supabase,user.id,mode,parsed.data.message)
+  const [{data:profilePreferences},{data:projectRow}]=await Promise.all([supabase.from('profiles').select('preferences').eq('id',user.id).maybeSingle(),chat.project_id?supabase.from('projects').select('settings').eq('id',chat.project_id).eq('owner_id',user.id).maybeSingle():Promise.resolve({data:null})])
+  const projectSettings=projectRow?.settings??{}\n  const skillInstructions=mode==='chat'?await activeSkillInstructions(supabase,user.id,parsed.data.message,Array.isArray(projectSettings.selectedSkillIds)?projectSettings.selectedSkillIds:undefined):await loadModeSkillInstructions(supabase,user.id,mode,parsed.data.message)
   const preferences=profilePreferences?.preferences??{}
   const languageNames={'pt-BR':'Brazilian Portuguese','en':'English','es':'Spanish','fr':'French','de':'German','it':'Italian','ja':'Japanese'} as Record<string,string>
   const personalityInstructions={balanced:'Use a balanced, natural and adaptive tone.',professional:'Use a professional, precise and well-structured tone.',friendly:'Use a warm, approachable and friendly tone.',concise:'Be concise and direct; avoid unnecessary preambles.',teacher:'Teach step by step, define technical terms and use examples.',analytical:'Analyze assumptions, evidence, trade-offs and limitations in depth.',creative:'Explore original ideas and alternatives while preserving factual accuracy.'} as Record<string,string>

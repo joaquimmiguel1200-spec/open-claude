@@ -108,7 +108,7 @@ export async function POST(request: Request) {
 
     const sandboxRunner=createVercelSandboxRunner()
     const testScript = testCommand
-      ? \`if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; elif [ -f package.json ]; then npm install --ignore-scripts --no-audit --no-fund; fi && \${testCommand}\`
+      ? `if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; elif [ -f package.json ]; then npm install --ignore-scripts --no-audit --no-fund; fi && ${testCommand}`
       : ''
     const testConfig=testCommand?{image:'node22',commands:[['bash','-lc',testScript]],files:testFiles.map(x=>({path:x.path,content:x.content})),allowNetwork:true,workingDirectory:'/vercel/sandbox',timeoutMs:600000}:undefined
     const agent = createCodeAgent(github,{

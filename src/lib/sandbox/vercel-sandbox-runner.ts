@@ -14,7 +14,6 @@ export function createVercelSandboxRunner():SandboxRunner{
    allow:{
     'registry.npmjs.org':[],
     'registry.yarnpkg.com':[],
-    'registry.npmjs.org:443':[],
     'pypi.org':[],
     'files.pythonhosted.org':[],
    }

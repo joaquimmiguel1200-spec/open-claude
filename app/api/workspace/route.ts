@@ -85,3 +85,62 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })
   }
 }
+
+
+export async function PATCH(request: Request) {
+  try {
+    const { user, supabase } = await requireUser()
+    const body = await request.json().catch(() => ({}))
+    const action = String(body?.action ?? '')
+    const chatId = String(body?.chatId ?? '')
+    if (!/^[0-9a-f-]{36}$/i.test(chatId)) return NextResponse.json({ error: 'Conversa inválida.' }, { status: 400 })
+    const { data: source, error: sourceError } = await supabase.from('chats').select('id,project_id,title,model,metadata,created_at').eq('id', chatId).eq('owner_id', user.id).maybeSingle()
+    if (sourceError) throw sourceError
+    if (!source) return NextResponse.json({ error: 'Conversa não encontrada.' }, { status: 404 })
+    const destinationId = body?.projectId === null || body?.projectId === '' ? null : String(body?.projectId ?? '')
+    if (destinationId) {
+      if (!/^[0-9a-f-]{36}$/i.test(destinationId)) return NextResponse.json({ error: 'Projeto de destino inválido.' }, { status: 400 })
+      const { data: destination } = await supabase.from('projects').select('id').eq('id', destinationId).eq('owner_id', user.id).maybeSingle()
+      if (!destination) return NextResponse.json({ error: 'Projeto de destino não encontrado.' }, { status: 404 })
+    }
+    if (action === 'chat.move') {
+      const { data, error } = await supabase.from('chats').update({ project_id: destinationId, updated_at: new Date().toISOString() }).eq('id', chatId).eq('owner_id', user.id).select('id,project_id,title,model,metadata,created_at,updated_at').single()
+      if (error) throw error
+      return NextResponse.json({ chat: data })
+    }
+    if (action === 'chat.copy') {
+      const { data: messages, error: messagesError } = await supabase.from('messages').select('role,content,metadata,created_at').eq('chat_id', chatId).eq('user_id', user.id).order('created_at', { ascending: true })
+      if (messagesError) throw messagesError
+      const { data: copy, error: copyError } = await supabase.from('chats').insert({ owner_id: user.id, project_id: destinationId ?? source.project_id, title: ('Cópia de ' + (source.title || 'Nova conversa')).slice(0, 200), model: source.model, metadata: source.metadata ?? {} }).select('id,project_id,title,model,metadata,created_at,updated_at').single()
+      if (copyError) throw copyError
+      if (messages?.length) {
+        const { error: insertError } = await supabase.from('messages').insert(messages.map(message => ({ ...message, chat_id: copy.id, user_id: user.id })))
+        if (insertError) {
+          await supabase.from('chats').delete().eq('id', copy.id).eq('owner_id', user.id)
+          throw insertError
+        }
+      }
+      return NextResponse.json({ chat: copy, copiedMessages: messages?.length ?? 0 }, { status: 201 })
+    }
+    return NextResponse.json({ error: 'Ação inválida.' }, { status: 400 })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Não foi possível atualizar a conversa.'
+    return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { user, supabase } = await requireUser()
+    const body = await request.json().catch(() => ({}))
+    const chatId = String(body?.chatId ?? '')
+    if (!/^[0-9a-f-]{36}$/i.test(chatId)) return NextResponse.json({ error: 'Conversa inválida.' }, { status: 400 })
+    const { data, error } = await supabase.from('chats').delete().eq('id', chatId).eq('owner_id', user.id).select('id').maybeSingle()
+    if (error) throw error
+    if (!data) return NextResponse.json({ error: 'Conversa não encontrada.' }, { status: 404 })
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Não foi possível excluir a conversa.'
+    return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : message }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })
+  }
+}

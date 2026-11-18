@@ -18,43 +18,43 @@ export async function POST(request: Request) {
 
     const repository = String(body.repository ?? '').trim()
     const branch = String(body.branch ?? 'main').trim()
+    const chatId = typeof body.chatId === 'string' ? body.chatId : null
+    const projectId = typeof body.projectId === 'string' ? body.projectId : null
     const paths = Array.isArray(body.paths) ? body.paths.map((value: unknown) => String(value).trim()).filter(Boolean).slice(0, 20) : []
-    const repositoryParts = repository.split('/')
+    const repositoryParts = repository ? repository.split('/') : []
     const [owner, repoName] = repositoryParts
-    if (repositoryParts.length !== 2 || !owner || !repoName || /\s/.test(repository) || /[?#]/.test(repository)) return NextResponse.json({ error: 'Informe um repositório no formato owner/repository.' }, { status: 400 })
+    if (repository && (repositoryParts.length !== 2 || !owner || !repoName || /\\s/.test(repository) || /[?#]/.test(repository))) return NextResponse.json({ error: 'Informe um repositório no formato owner/repository.' }, { status: 400 })
     if (!branch || branch.length > 100 || /[^A-Za-z0-9._/-]/.test(branch) || branch.split('/').includes('..')) return NextResponse.json({ error: 'Branch inválida.' }, { status: 400 })
+    if (chatId) { const { data } = await supabase.from('chats').select('id').eq('id', chatId).eq('owner_id', user.id).maybeSingle(); if (!data) return NextResponse.json({ error: 'Conversa não encontrada ou não autorizada.' }, { status: 404 }) }
+    if (projectId) { const { data } = await supabase.from('projects').select('id').eq('id', projectId).eq('owner_id', user.id).maybeSingle(); if (!data) return NextResponse.json({ error: 'Projeto não encontrado ou não autorizado.' }, { status: 403 }) }
     if (paths.some((path: string) => !path || path.length > 240 || path.startsWith('/') || path.split('/').some((part) => !part || part === '..') || path.startsWith('.git/'))) {
       return NextResponse.json({ error: 'Lista de arquivos inválida.' }, { status: 400 })
     }
 
-    const github = await createGitHubClientForUser(supabase, user.id)
     const files = []
-    let totalBytes = 0
-    for (const path of paths) {
-      const file = await github.getFile(owner, repoName, path, branch, request.signal)
-      totalBytes += Buffer.byteLength(file.content, 'utf8')
-      if (totalBytes > 1_500_000) return NextResponse.json({ error: 'Os arquivos selecionados excedem o limite de 1,5 MB do terminal.' }, { status: 413 })
-      files.push({ path: file.path, content: file.content })
+    if (repository) {
+      const github = await createGitHubClientForUser(supabase, user.id)
+      let totalBytes = 0
+      for (const path of paths) {
+        const file = await github.getFile(owner, repoName, path, branch, request.signal)
+        totalBytes += Buffer.byteLength(file.content, 'utf8')
+        if (totalBytes > 1_500_000) return NextResponse.json({ error: 'Os arquivos selecionados excedem o limite de 1,5 MB do terminal.' }, { status: 413 })
+        files.push({ path: file.path, content: file.content })
+      }
     }
-
-    const result = await runPersistentTerminal({
-      scope: `${user.id}:code:${repository.toLowerCase()}:${branch}`,
-      command,
-      files,
-      signal: request.signal,
-      timeoutMs: 120_000,
-    })
+    const scope = repository ? `${user.id}:code:${repository.toLowerCase()}:${branch}` : projectId ? `${user.id}:code:project:${projectId}` : chatId ? `${user.id}:code:chat:${chatId}` : `${user.id}:code:default`
+    const result = await runPersistentTerminal({ scope, command, files, signal: request.signal, timeoutMs: 120_000 })
     return NextResponse.json({
       ok: result.status === 'completed',
       command,
       ...result,
       persistent: true,
-      workspace: `${repository}@${branch}`,
-      note: 'Workspace Linux persistente por repositório e branch. Arquivos carregados do GitHub são preservados entre comandos; a rede fica limitada a registros de pacotes.',
+      workspace: repository ? `${repository}@${branch}` : projectId ? `Projeto ${projectId}` : chatId ? `Conversa ${chatId}` : 'Workspace pessoal',
+      note: repository ? 'Workspace Linux persistente por repositório e branch. Arquivos carregados do GitHub são preservados entre comandos; a rede fica limitada a registros de pacotes.' : 'Workspace Linux persistente independente do GitHub, separado por projeto ou conversa; a rede fica limitada a registros de pacotes.',
     }, { status: result.status === 'completed' ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
-    const status = message === 'UNAUTHENTICATED' ? 401 : /Informe um comando|Informe um repositório|Branch inválida|Lista de arquivos|Caminho de arquivo|Arquivo grande demais/i.test(message) ? 400 : 500
+    const status = message === 'UNAUTHENTICATED' ? 401 : /Informe um comando|Branch inválida|Lista de arquivos|Caminho de arquivo|Arquivo grande demais/i.test(message) ? 400 : 500
     return NextResponse.json({ error: status === 500 ? 'Não foi possível iniciar o terminal persistente. Confira a conexão GitHub e a configuração do Vercel Sandbox.' : message }, { status, headers: { 'Cache-Control': 'no-store' } })
   }
 }

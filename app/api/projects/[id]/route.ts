@@ -9,7 +9,7 @@ function validSettings(value: unknown) {
   const instructions = typeof input.instructions === 'string' ? input.instructions.trim().slice(0, 8000) : ''
   const defaultMode = ['chat', 'code', 'cowork'].includes(String(input.defaultMode)) ? String(input.defaultMode) : 'chat'
   const model = typeof input.model === 'string' ? input.model.trim().slice(0, 200) : ''
-  return { instructions, defaultMode, model }
+  const ids = (key: string) => Array.isArray(input[key]) ? (input[key] as unknown[]).filter((v): v is string => typeof v === 'string' && /^[a-zA-Z0-9:_./-]{1,300}$/.test(v)).slice(0, 600) : []\n  return { instructions, defaultMode, model, selectedAgentIds: ids('selectedAgentIds'), selectedSkillIds: ids('selectedSkillIds') }
 }
 
 function projectIdFrom(request: Request) {
@@ -51,5 +51,21 @@ export async function PATCH(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
     return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : 'Não foi possível salvar as configurações do projeto.' }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })
+  }
+}
+
+
+export async function DELETE(request: Request) {
+  try {
+    const { user, supabase } = await requireUser()
+    const id = projectIdFrom(request)
+    if (!id) return NextResponse.json({ error: 'Projeto inválido.' }, { status: 400 })
+    const { data, error } = await supabase.from('projects').delete().eq('id', id).eq('owner_id', user.id).select('id').maybeSingle()
+    if (error) throw error
+    if (!data) return NextResponse.json({ error: 'Projeto não encontrado.' }, { status: 404 })
+    return NextResponse.json({ ok: true, chatsUnassigned: true })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    return NextResponse.json({ error: message === 'UNAUTHENTICATED' ? 'Não autenticado.' : 'Não foi possível excluir o projeto.' }, { status: message === 'UNAUTHENTICATED' ? 401 : 500 })
   }
 }

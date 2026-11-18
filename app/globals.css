@@ -181,3 +181,5 @@ button:focus-visible,a:focus-visible,[role=button]:focus-visible{outline:2px sol
 .card{background:linear-gradient(145deg,rgba(20,30,55,.96),rgba(13,22,40,.96))!important;border-color:#304166!important}
 .button,.button.glow{background:linear-gradient(110deg,#7c3aed,#4f46e5)!important;color:#fff!important;border-color:#8179f6!important;box-shadow:0 12px 32px rgba(79,70,229,.22)!important}
 .button.secondary{background:#17213c!important;color:#e6ebff!important;border-color:#34456f!important}
+
+.code-terminal input{background:#0b1427!important;border:1px solid #35476e!important;color:#f5f7ff!important}.code-terminal input::placeholder{color:#8999bd!important}.code-terminal span{color:#67e8f9!important}

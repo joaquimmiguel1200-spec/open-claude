@@ -28,7 +28,7 @@ function requestedReadTools(goal: string, taskTitle: string): RequestedTool[] {
 export function createAgentTaskRunner(agent: AgentRuntime, options: CoworkTaskRunnerOptions = {}): CoworkTaskRunner {
   return {
     async run(task: CoworkTask, input: CoworkRunInput, signal) {
-      let goal = `${task.objective}\nOverall goal: ${input.goal}`
+      const nativeRoles: Record<string,string> = { 'understand objective': 'Internal role: Analyst. Clarify the requested outcome, constraints, available context and unknowns.', 'plan work': 'Internal role: Orchestrator. Sequence dependent tasks, define acceptance criteria and avoid duplicate work.', 'execute': 'Internal role: Specialist executor. Perform only the assigned work with the available tools and permissions.', 'validate': 'Internal role: QA and security reviewer. Check correctness, edge cases, regressions, ownership boundaries and safety.', 'finalize': 'Internal role: Delivery reviewer. Consolidate verified outputs, limitations and next steps without claiming unperformed actions.' }\n      let goal = `${nativeRoles[task.title.toLowerCase()] ?? 'Internal role: Project specialist. Complete the assigned task carefully.'}\n${task.objective}\nOverall goal: ${input.goal}`
       const saveArtifact = task.title.toLowerCase() === 'finalize' && wantsArtifactSave(input.goal)
       if (saveArtifact) goal += '\nReturn the complete deliverable in Markdown with a clear title. It will be saved as a workspace artifact.'
       const requested = requestedReadTools(input.goal, task.title)

@@ -9,9 +9,7 @@ function validSettings(value: unknown) {
   const instructions = typeof input.instructions === 'string' ? input.instructions.trim().slice(0, 8000) : ''
   const defaultMode = ['chat', 'code', 'cowork'].includes(String(input.defaultMode)) ? String(input.defaultMode) : 'chat'
   const model = typeof input.model === 'string' ? input.model.trim().slice(0, 200) : ''
-  const enabledAgents = Array.isArray(input.enabledAgents) ? input.enabledAgents.filter((x): x is string => typeof x === 'string').slice(0, 100) : []
-  const enabledSkills = Array.isArray(input.enabledSkills) ? input.enabledSkills.filter((x): x is string => typeof x === 'string').slice(0, 100) : []
-  return { instructions, defaultMode, model, enabledAgents, enabledSkills }
+  return { instructions, defaultMode, model }
 }
 
 function projectIdFrom(request: Request) {

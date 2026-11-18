@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   try {
     const { user, supabase } = await requireUser()
     const [{ data: projects, error: projectsError }, { data: chats, error: chatsError }, { data: profile }] = await Promise.all([
-      supabase.from('projects').select('id,name,description,created_at,updated_at').eq('owner_id', user.id).order('updated_at', { ascending: false }),
+      supabase.from('projects').select('id,name,description,settings,created_at,updated_at').eq('owner_id', user.id).order('updated_at', { ascending: false }),
       supabase.from('chats').select('id,project_id,title,model,metadata,created_at,updated_at').eq('owner_id', user.id).order('updated_at', { ascending: false }).limit(100),
       supabase.from('profiles').select('display_name,avatar_url,preferences').eq('id', user.id).maybeSingle(),
     ])
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         console.error('[workspace] project creation failed', { code: error.code, message: error.message })
         return NextResponse.json({ error: error.message || 'O banco recusou a criação do projeto.', code: error.code ?? null, hint: error.hint ?? null }, { status: error.code === '42501' ? 403 : 400, headers: { 'Cache-Control': 'no-store' } })
       }
-      const { data, error: readError } = await supabase.from('projects').select('id,name,description,created_at,updated_at').eq('id', projectId).eq('owner_id', user.id).single()
+      const { data, error: readError } = await supabase.from('projects').select('id,name,description,settings,created_at,updated_at').eq('id', projectId).eq('owner_id', user.id).single()
       if (readError || !data) {
         console.error('[workspace] project inserted but could not be read', { code: readError?.code, message: readError?.message })
         return NextResponse.json({ error: 'O projeto foi criado, mas não pôde ser carregado. Atualize a página.', code: readError?.code ?? null }, { status: 500, headers: { 'Cache-Control': 'no-store' } })

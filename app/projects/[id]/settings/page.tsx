@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 
-type Settings = { instructions: string; defaultMode: 'chat'|'code'|'cowork'; model: string; enabledAgents: string[]; enabledSkills: string[] }
-const empty: Settings = { instructions: '', defaultMode: 'chat', model: '', enabledAgents: [], enabledSkills: [] }
+type Settings = { instructions: string; defaultMode: 'chat'|'code'|'cowork'; model: string }
+const empty: Settings = { instructions: '', defaultMode: 'chat', model: '' }
 
 export default function ProjectSettingsPage() {
   const params = useParams<{id:string}>()
@@ -24,7 +24,7 @@ export default function ProjectSettingsPage() {
       <label style={{display:'grid',gap:8}}>Instruções do projeto<textarea rows={8} maxLength={8000} value={settings.instructions} onChange={e=>setSettings(s=>({...s,instructions:e.target.value}))} placeholder="Descreva o objetivo, contexto, regras, padrões técnicos e decisões que o Open Claude deve respeitar neste projeto." style={{width:'100%',padding:12,borderRadius:9,background:'var(--surface-2)',color:'var(--text)',border:'1px solid var(--line)'}}/><small className="muted">Até 8.000 caracteres. Estas instruções são adicionadas ao contexto das novas tarefas do projeto.</small></label>
       <label style={{display:'grid',gap:8}}>Modo padrão<select value={settings.defaultMode} onChange={e=>setSettings(s=>({...s,defaultMode:e.target.value as Settings['defaultMode']}))}><option value="chat">Chat</option><option value="code">Code</option><option value="cowork">Cowork</option></select></label>
       <label style={{display:'grid',gap:8}}>Modelo padrão<input value={settings.model} onChange={e=>setSettings(s=>({...s,model:e.target.value}))} placeholder="Deixe vazio para usar o modelo global"/></label>
-      <div><h3>Agentes e Skills preferidos</h3><p className="muted">IDs opcionais para futura seleção por projeto. A seleção global continua sendo respeitada.</p><label style={{display:'grid',gap:8}}>IDs de agentes (separados por vírgula)<input value={settings.enabledAgents.join(', ')} onChange={e=>setSettings(s=>({...s,enabledAgents:e.target.value.split(',').map(x=>x.trim()).filter(Boolean).slice(0,100)}))} placeholder="Ex.: builtin:full-stack"/></label><label style={{display:'grid',gap:8,marginTop:12}}>Skills preferidas (nomes separados por vírgula)<input value={settings.enabledSkills.join(', ')} onChange={e=>setSettings(s=>({...s,enabledSkills:e.target.value.split(',').map(x=>x.trim()).filter(Boolean).slice(0,100)}))} placeholder="Ex.: frontend-design, tdd-workflow"/></label></div>
+
       {error&&<p role="alert" style={{color:'#ef8888'}}>{error}</p>}{notice&&<p role="status" style={{color:'#38b99b'}}>{notice}</p>}
       <div style={{display:'flex',justifyContent:'flex-end'}}><button className="button glow" disabled={saving} onClick={save}>{saving?'Salvando…':'Salvar configurações'}</button></div>
     </section>}

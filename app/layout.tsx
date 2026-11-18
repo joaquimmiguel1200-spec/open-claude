@@ -5,10 +5,10 @@ import { PwaInstallPrompt } from './components/pwa-install'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://open-claude.vercel.app'),
-  title: { default: 'Open Claude — Seu agente de IA pessoal', template: '%s — Open Claude' },
+  title: { default: 'Open Claude — Seu AI workspace completo', template: '%s — Open Claude' },
   description: 'Um agente de IA pessoal para conversar, trabalhar em projetos, usar ferramentas, arquivos, memória, GitHub, MCP e Cowork.',
   applicationName: 'Open Claude',
-  themeColor: '#101316',
+  themeColor: '#090b18',
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Open Claude' },
   icons: { icon: '/icon.svg', apple: '/icon.svg', shortcut: '/icon.svg' },

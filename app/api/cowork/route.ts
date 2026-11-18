@@ -52,12 +52,21 @@ export async function POST(request: Request) {
     })
 
     const persistence = createPersistence(supabase)
-    if (result.status === 'completed' && body?.chatId) {
+    if (body?.chatId) {
+      await persistence.appendMessage({
+        chatId: body.chatId,
+        userId: user.id,
+        role: 'user',
+        content: goal,
+        metadata: { mode: 'cowork', runId: result.runId },
+      })
       await persistence.appendMessage({
         chatId: body.chatId,
         userId: user.id,
         role: 'assistant',
-        content: result.plan.tasks.map((task) => `## ${task.title}\n${typeof task.result === 'string' ? task.result : JSON.stringify(task.result)}`).join('\n\n'),
+        content: result.status === 'completed'
+          ? result.plan.tasks.map((task) => `## ${task.title}\\n${typeof task.result === 'string' ? task.result : JSON.stringify(task.result)}`).join('\\n\\n')
+          : result.error ?? 'A execução Cowork não foi concluída.',
         metadata: { mode: 'cowork', runId: result.runId, status: result.status, tasks: result.plan.tasks.length },
       })
     }

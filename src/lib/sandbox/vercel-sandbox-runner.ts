@@ -10,7 +10,14 @@ export function createVercelSandboxRunner():SandboxRunner{
   if(!request.command.length)throw new Error('Sandbox command is required.')
   safeEnv(request.environment)
   const timeout=Math.max(5_000,Math.min(request.limits?.timeoutMs??120_000,10*60_000))
-  const sandbox=await Sandbox.create({runtime:'node22',persistent:false,timeout,networkPolicy:request.allowNetwork?'allow-all':'deny-all',resources:{vcpus:Math.max(1,Math.min(request.limits?.cpus??1,4))}})
+  const sandbox=await Sandbox.create({runtime:'node22',persistent:false,timeout,networkPolicy:request.allowNetwork?{
+   allow:{
+    'registry.npmjs.org':[],
+    'registry.yarnpkg.com':[],
+    'pypi.org':[],
+    'files.pythonhosted.org':[],
+   }
+  }:'deny-all',resources:{vcpus:Math.max(1,Math.min(request.limits?.cpus??1,4))}})
   const started=Date.now()
   try{
    await sandbox.writeFiles((request.files??[]).map(f=>({path:safePath(f.path),content:Buffer.from(f.content,'utf8')})))

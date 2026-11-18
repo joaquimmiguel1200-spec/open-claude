@@ -7,12 +7,12 @@
   "start_url": "/chat",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#080b18",
+  "background_color": "#080d1b",
   "theme_color": "#080b18",
   "orientation": "any",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/icon.svg?v=20261117",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

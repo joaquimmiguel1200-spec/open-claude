@@ -58,7 +58,7 @@ export async function POST(request:Request){
   const memories=await retrieveMemories({userId:user.id,projectId:chat.project_id,chatId:chat.id,text:parsed.data.message,limit:12},persistence.memoryStore)
   const ragResults=await persistence.searchChunks(user.id,parsed.data.message,8)
   const mode=parsed.data.mode??'chat'
-  const [{data:profilePreferences},skillInstructions]=await Promise.all([supabase.from('profiles').select('preferences').eq('id',user.id).maybeSingle(),mode==='chat'?activeSkillInstructions(supabase,user.id,parsed.data.message):loadModeSkillInstructions(supabase,user.id,mode,parsed.data.message)])
+  const [{data:profilePreferences},{data:projectRow},skillInstructions]=await Promise.all([supabase.from('profiles').select('preferences').eq('id',user.id).maybeSingle(),chat.project_id?supabase.from('projects').select('settings').eq('id',chat.project_id).eq('owner_id',user.id).maybeSingle():Promise.resolve({data:null}),mode==='chat'?activeSkillInstructions(supabase,user.id,parsed.data.message):loadModeSkillInstructions(supabase,user.id,mode,parsed.data.message)])
   const preferences=profilePreferences?.preferences??{}
   const languageNames={'pt-BR':'Brazilian Portuguese','en':'English','es':'Spanish','fr':'French','de':'German','it':'Italian','ja':'Japanese'} as Record<string,string>
   const personalityInstructions={balanced:'Use a balanced, natural and adaptive tone.',professional:'Use a professional, precise and well-structured tone.',friendly:'Use a warm, approachable and friendly tone.',concise:'Be concise and direct; avoid unnecessary preambles.',teacher:'Teach step by step, define technical terms and use examples.',analytical:'Analyze assumptions, evidence, trade-offs and limitations in depth.',creative:'Explore original ideas and alternatives while preserving factual accuracy.'} as Record<string,string>
@@ -66,7 +66,8 @@ export async function POST(request:Request){
   const personalityInstruction=preferences.personality?personalityInstructions[preferences.personality]??null:null
   const custom=parsed.data.customInstructions?.trim()||preferences.customInstructions?.trim()
   const personalization=custom?`PERSONALIZATION INSTRUCTIONS (user preference; follow when compatible with safety and task requirements):\n${custom}`:null
-  const systemInstructions=[modeInstructions[mode],languageInstruction,personalityInstruction,personalization,...skillInstructions].filter(Boolean)
+  const projectInstructions=typeof projectRow?.settings?.instructions==='string'&&projectRow.settings.instructions.trim()?`PROJECT INSTRUCTIONS (apply to every task in this project unless the user explicitly overrides them):\n${projectRow.settings.instructions.trim()}`:null
+  const systemInstructions=[modeInstructions[mode],projectInstructions,languageInstruction,personalityInstruction,personalization,...skillInstructions].filter(Boolean)
   const providers=await userAIProviders(supabase,user.id)
   const [profileOutputs,mcpResults]=await Promise.all([runAgentProfiles(supabase,user.id,mode,parsed.data.message,parsed.data.model,providers,request.signal),runMcpReadTools(mode,parsed.data.message,request.signal)])
   const agentContext=profileOutputs.map((x:any)=>`[Agente: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')

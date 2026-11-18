@@ -36,7 +36,8 @@ export async function POST(request: Request) {
     const projectId = typeof body?.projectId === 'string' ? body.projectId : null
     const persistence = createPersistence(supabase)
     if (chatId) { const { data: chat } = await supabase.from('chats').select('id').eq('id', chatId).eq('owner_id', user.id).maybeSingle(); if (!chat) return NextResponse.json({ error: 'Conversa não encontrada ou não autorizada.' }, { status: 404 }) }
-    if (projectId) { const { data: project } = await supabase.from('projects').select('id').eq('id', projectId).eq('owner_id', user.id).maybeSingle(); if (!project) return NextResponse.json({ error: 'Projeto não encontrado ou não autorizado.' }, { status: 403 }) }
+    let projectSettings:any = null
+    if (projectId) { const { data: project } = await supabase.from('projects').select('id,settings').eq('id', projectId).eq('owner_id', user.id).maybeSingle(); if (!project) return NextResponse.json({ error: 'Projeto não encontrado ou não autorizado.' }, { status: 403 }); projectSettings=project.settings??{} }
     const strategies: AIRoutingStrategy[] = ['auto','quality','cost','latency','free']
     const strategy = strategies.includes(body?.strategy) ? body.strategy : 'free'
     if (!goal || goal.length > 12000) return NextResponse.json({ error: 'O objetivo Code é obrigatório.' }, { status: 400 })
@@ -61,7 +62,8 @@ export async function POST(request: Request) {
     const personalityInstruction = personalityInstructions[preferences.personality] ?? ''
     const customInstructions = typeof body?.customInstructions === 'string' ? body.customInstructions.trim() : String(preferences.customInstructions ?? '').trim()
     const personalization = [languageInstruction, personalityInstruction, customInstructions].filter(Boolean).join('\n\n')
-    const personalizedGoal = [goal, personalization ? 'USER PERSONALIZATION PREFERENCES:\n' + personalization : ''].filter(Boolean).join('\n\n')
+    const projectInstructions = typeof projectSettings?.instructions==='string'&&projectSettings.instructions.trim() ? 'PROJECT INSTRUCTIONS:\n'+projectSettings.instructions.trim() : ''
+    const personalizedGoal = [goal, projectInstructions, personalization ? 'USER PERSONALIZATION PREFERENCES:\n' + personalization : ''].filter(Boolean).join('\n\n')
     const profileOutputs = await runAgentProfiles(supabase,user.id,'code',personalizedGoal,typeof body?.model==='string'?body.model.trim():undefined,providers,request.signal)
     const [skillInstructions,mcpResults] = await Promise.all([loadModeSkillInstructions(supabase,user.id,'code',personalizedGoal),runMcpReadTools('code',goal,request.signal)])
     const agentContext = profileOutputs.map((x:any)=>`[Agent: ${x.name} | ${x.provider}/${x.model}]\n${x.content}`).join('\n\n')

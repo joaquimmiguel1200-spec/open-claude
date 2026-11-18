@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: { default: 'Open Claude — Seu agente de IA pessoal', template: '%s — Open Claude' },
   description: 'Um agente de IA pessoal para conversar, trabalhar em projetos, usar ferramentas, arquivos, memória, GitHub, MCP e Cowork.',
   applicationName: 'Open Claude',
-  themeColor: '#171513',
+  themeColor: '#101316',
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Open Claude' },
   icons: { icon: '/icon.svg', apple: '/icon.svg', shortcut: '/icon.svg' },

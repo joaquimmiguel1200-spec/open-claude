@@ -9,6 +9,8 @@ const defaults:Record<string,{baseUrl:string;kind:AIProviderKind}> = {
   openrouter:{baseUrl:'https://openrouter.ai/api/v1',kind:'openrouter'},
   openai:{baseUrl:'https://api.openai.com/v1',kind:'openai-compatible'},
   anthropic:{baseUrl:'https://api.anthropic.com',kind:'anthropic-compatible'},
+  huggingface:{baseUrl:'https://router.huggingface.co/v1',kind:'openai-compatible'},
+  ollama:{baseUrl:'',kind:'openai-compatible'},
   custom:{baseUrl:'',kind:'openai-compatible'},
 }
 

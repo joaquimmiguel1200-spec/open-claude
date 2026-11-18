@@ -23,6 +23,7 @@ function validUrl(value: string, provider: string) {
       openrouter: 'openrouter.ai',
       openai: 'api.openai.com',
       anthropic: 'api.anthropic.com',
+      huggingface: 'router.huggingface.co',
     }
     if (provider !== 'custom' && official[provider] && host !== official[provider]) return false
     return true
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
     const model = String(body?.model ?? '').trim()
     const baseUrl = String(body?.baseUrl ?? '').trim()
     const key = String(body?.key ?? '').trim()
-    if (!name || !model || !key || !['openrouter', 'openai', 'anthropic', 'custom'].includes(provider) ||
+    if (!name || !model || !key || !['openrouter', 'openai', 'anthropic', 'huggingface', 'ollama', 'custom'].includes(provider) ||
         !validUrl(baseUrl, provider) || name.length > 80 || model.length > 200 || key.length > 8192 || baseUrl.length > 500) {
       return NextResponse.json({ error: 'Dados da API inválidos.' }, { status: 400 })
     }

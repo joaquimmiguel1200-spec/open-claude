@@ -46,7 +46,7 @@ export default function AdminDiagnosticsPage(){
     <a href="/admin" style={{color:'#e9a080',textDecoration:'none',fontSize:13}}>← Painel administrativo</a>
     <div style={{maxWidth:1080,margin:'24px auto'}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap'}}>
-        <div><p style={{color:'#d99575',fontSize:11,letterSpacing:2}}>OPEN CLAUDE · ADMIN</p><h1 style={{fontSize:32,margin:'8px 0'}}>Diagnóstico e testes de APIs</h1><p style={{color:'#aaa',maxWidth:720,lineHeight:1.6}}>Executa 10 grupos de testes diretamente nesta sessão autenticada, incluindo Chat, Code, Cowork, catálogo de skills/agentes e escopos MCP. Os três modos finais usam o provedor real configurado na conta.</p></div>
+        <div><p style={{color:'#a5b4fc',fontSize:11,letterSpacing:2}}>OPEN CLAUDE · ADMIN</p><h1 style={{fontSize:32,margin:'8px 0'}}>Diagnóstico e testes de APIs</h1><p style={{color:' #aab8d8',maxWidth:720,lineHeight:1.6}}>Executa 10 grupos de testes diretamente nesta sessão autenticada, incluindo Chat, Code, Cowork, catálogo de skills/agentes e escopos MCP. Os três modos finais usam o provedor real configurado na conta.</p></div>
         <button onClick={run} disabled={running} style={{background:running?'#444':'#e99a78',color:'#16120f',border:0,borderRadius:10,padding:'13px 18px',fontWeight:700,cursor:running?'wait':'pointer'}}>{running?'Executando…':'Executar 10 testes'}</button>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:12,margin:'26px 0'}}>
@@ -58,7 +58,7 @@ export default function AdminDiagnosticsPage(){
           <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}><strong>{g.name}</strong><span style={{fontSize:11,color:!done?'#999':ok?'#8ed6a5':'#ff9999'}}>{!done?'Aguardando':ok?'APROVADO':'FALHOU'}</span></div>
           {rows.map((r,j)=><div key={r.path+j} style={{marginTop:12,paddingTop:10,borderTop:'1px solid #303036',fontSize:12}}>
             <div style={{display:'flex',justifyContent:'space-between',gap:10,flexWrap:'wrap'}}><code>{r.path}</code><span style={{color:r.ok?'#8ed6a5':'#ff9999'}}>{r.status??'ERRO'} · {r.ms} ms</span></div>
-            <pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',color:'#aaa',fontSize:11,maxHeight:130,overflow:'auto',marginTop:8}}>{r.detail}</pre>
+            <pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',color:' #aab8d8',fontSize:11,maxHeight:130,overflow:'auto',marginTop:8}}>{r.detail}</pre>
           </div>)}
         </section>})}
       </div>

@@ -20,6 +20,7 @@ export async function runAgentProfiles(
   selectedModel: string | undefined,
   providers: AIProviderConfig[],
   signal?: AbortSignal,
+  allowedCatalogIds?: string[],
 ) {
   let data: AgentProfile[] | null = null
   try {
@@ -32,7 +33,9 @@ export async function runAgentProfiles(
     console.warn('[agent-orchestrator] profile registry unavailable; using primary model only', { code: (error as any)?.code ?? 'unknown' })
     return []
   }
-  if (mode !== 'chat') return []\n  const allowed = Array.isArray(allowedCatalogIds) ? new Set(allowedCatalogIds) : null\n  const modeProfiles = (data ?? []).filter((profile: AgentProfile) => (profile.modes ?? []).includes('chat') && (!allowed || !profile.metadata?.catalogId || allowed.has(String(profile.metadata.catalogId))))
+  if (mode !== 'chat') return []
+  const allowed = Array.isArray(allowedCatalogIds) ? new Set(allowedCatalogIds) : null
+  const modeProfiles = (data ?? []).filter((profile: AgentProfile) => (profile.modes ?? []).includes('chat') && (!allowed || !profile.metadata?.catalogId || allowed.has(String(profile.metadata.catalogId))))
   const normalizeTokens = (value: string) => value.toLowerCase().normalize('NFKD').split('').filter((character) => {
     const code = character.charCodeAt(0)
     return code < 768 || code > 879

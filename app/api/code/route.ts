@@ -53,6 +53,19 @@ export async function POST(request: Request) {
       snapshots.push({ path: file.path, sha: file.sha, content: file.content })
     }
 
+    // Dependency manifests are test context only unless explicitly selected by the user.
+    const testFiles = [...snapshots]
+    for (const manifestPath of ['package.json', 'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock']) {
+      if (testFiles.some((file) => file.path === manifestPath)) continue
+      try {
+        const file = await github.getFile(owner, repo, manifestPath, branch, request.signal)
+        testFiles.push({ path: file.path, sha: file.sha, content: file.content })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : ''
+        if (!/GitHub API 404|API 404|Not Found/i.test(message)) throw error
+      }
+    }
+
     const providers = await userAIProviders(supabase, user.id)
     const { data: profile } = await supabase.from('profiles').select('preferences').eq('id', user.id).maybeSingle()
     const preferences = profile?.preferences ?? {}
@@ -84,7 +97,7 @@ export async function POST(request: Request) {
     const plan = suppliedPlan ?? extractJson(response.content)
     if (!plan || !Array.isArray(plan.edits) || !plan.edits.length) return NextResponse.json({ error: 'O modelo não produziu alterações válidas.', raw: response.content }, { status: 422 })
 
-    const allowed = new Map(snapshots.map((file) => [file.path, file.sha]))
+    const allowed = new Map(snapshots.filter((file) => paths.includes(file.path)).map((file) => [file.path, file.sha]))
     const edits = plan.edits.map((edit: any) => {
       const path = String(edit?.path ?? '').trim()
       if (!allowed.has(path)) throw new Error(`O modelo tentou alterar um caminho não autorizado: ${path}`)
@@ -94,7 +107,10 @@ export async function POST(request: Request) {
     if (!apply) return NextResponse.json({ mode: 'code', applied: false, repository, branch, summary: String(plan.summary ?? ''), commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), edits, model: response.model, provider: response.provider, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { headers: { 'Cache-Control': 'no-store' } })
 
     const sandboxRunner=createVercelSandboxRunner()
-    const testConfig=testCommand?{image:'node22',commands:[testCommand.split(/\s+/).filter(Boolean)],files:snapshots.map(x=>({path:x.path,content:x.content})),allowNetwork:false,workingDirectory:'/vercel/sandbox'}:undefined
+    const testScript = testCommand
+      ? \`if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; elif [ -f package.json ]; then npm install --ignore-scripts --no-audit --no-fund; fi && \${testCommand}\`
+      : ''
+    const testConfig=testCommand?{image:'node22',commands:[['bash','-lc',testScript]],files:testFiles.map(x=>({path:x.path,content:x.content})),allowNetwork:true,workingDirectory:'/vercel/sandbox',timeoutMs:600000}:undefined
     const agent = createCodeAgent(github,{
       sandboxRunner,
       maxTestIterations:3,

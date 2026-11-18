@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const paths = Array.isArray(body.paths) ? body.paths.map((value: unknown) => String(value).trim()).filter(Boolean).slice(0, 20) : []
     const repositoryParts = repository ? repository.split('/') : []
     const [owner, repoName] = repositoryParts
-    if (repository && (repositoryParts.length !== 2 || !owner || !repoName || /\\s/.test(repository) || /[?#]/.test(repository))) return NextResponse.json({ error: 'Informe um repositório no formato owner/repository.' }, { status: 400 })
+    if (repository && (repositoryParts.length !== 2 || !owner || !repoName || /\s/.test(repository) || /[?#]/.test(repository))) return NextResponse.json({ error: 'Informe um repositório no formato owner/repository.' }, { status: 400 })
     if (!branch || branch.length > 100 || /[^A-Za-z0-9._/-]/.test(branch) || branch.split('/').includes('..')) return NextResponse.json({ error: 'Branch inválida.' }, { status: 400 })
     if (chatId) { const { data } = await supabase.from('chats').select('id').eq('id', chatId).eq('owner_id', user.id).maybeSingle(); if (!data) return NextResponse.json({ error: 'Conversa não encontrada ou não autorizada.' }, { status: 404 }) }
     if (projectId) { const { data } = await supabase.from('projects').select('id').eq('id', projectId).eq('owner_id', user.id).maybeSingle(); if (!data) return NextResponse.json({ error: 'Projeto não encontrado ou não autorizado.' }, { status: 403 }) }

@@ -9,7 +9,7 @@ function validSettings(value: unknown) {
   const instructions = typeof input.instructions === 'string' ? input.instructions.trim().slice(0, 8000) : ''
   const defaultMode = ['chat', 'code', 'cowork'].includes(String(input.defaultMode)) ? String(input.defaultMode) : 'chat'
   const model = typeof input.model === 'string' ? input.model.trim().slice(0, 200) : ''
-  const ids = (key: string) => Array.isArray(input[key]) ? (input[key] as unknown[]).filter((v): v is string => typeof v === 'string' && /^[a-zA-Z0-9:_./-]{1,300}$/.test(v)).slice(0, 600) : []\n  return { instructions, defaultMode, model, selectedAgentIds: ids('selectedAgentIds'), selectedSkillIds: ids('selectedSkillIds') }
+  const ids = (key: string) => Array.isArray(input[key]) ? (input[key] as unknown[]).filter((v): v is string => typeof v === 'string' && /^[a-zA-Z0-9:_./-]{1,300}$/.test(v)).slice(0, 600) : []\n  return { instructions, defaultMode, model, ...(Array.isArray(input.selectedAgentIds) ? { selectedAgentIds: ids('selectedAgentIds') } : {}), ...(Array.isArray(input.selectedSkillIds) ? { selectedSkillIds: ids('selectedSkillIds') } : {}) }
 }
 
 function projectIdFrom(request: Request) {

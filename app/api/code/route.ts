@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const goal = String(body?.goal ?? '').trim()
     const repository = String(body?.repository ?? process.env.GITHUB_REPOSITORY ?? '').trim()
     const branch = String(body?.branch ?? process.env.GITHUB_DEFAULT_BRANCH ?? 'main').trim()
-    const requestedPaths = Array.isArray(body?.paths) ? body.paths.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, 30) : []
+    const requestedPaths = Array.isArray(body?.paths) ? body.paths.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, 100) : []
     const sensitivePath = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|id_rsa|id_ed25519|credentials(?:\.json)?|service[-_]?account[^/]*\.json|secrets?[^/]*\.(json|ya?ml)|[^/]*\.(pem|key|p12|pfx|tfstate))$/i
     const apply = body?.apply === true
     const testCommand = typeof body?.testCommand === 'string' ? body.testCommand.trim() : ''
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       const priority = (path: string) => /(^|\/)(package\.json|tsconfig\.json|next\.config|README|AGENTS\.md)$/i.test(path) ? 0 : /^(app|src|lib|components)\//.test(path) ? 1 : 2
       return priority(a.path)-priority(b.path) || a.path.localeCompare(b.path)
     })
-    const candidatePaths = requestedPaths.length ? requestedPaths : autoPaths.slice(0, 35).map(file => file.path)
+    const candidatePaths = requestedPaths.length ? requestedPaths : autoPaths.slice(0, 80).map(file => file.path)
     if (!candidatePaths.length) return NextResponse.json({ error: 'Não encontrei arquivos de texto elegíveis neste repositório.' }, { status: 422 })
     let contextBytes = 0
     for (const path of candidatePaths) {

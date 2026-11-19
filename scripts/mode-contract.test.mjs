@@ -139,3 +139,12 @@ test('Code validates requested and generated paths and bounds repository context
   assert.match(api, /contextBytes \+ treeFile\.size > 160_000/)
   assert.match(api, /Caminho inválido proposto pelo modelo/)
 })
+
+
+test('Code excludes credentials, environment files and private keys from repository context and edits', async () => {
+  const api = await source('app/api/code/route.ts')
+  assert.match(api, /const sensitivePath =/)
+  assert.match(api, /!sensitivePath\.test\(file\.path\)/)
+  assert.match(api, /sensitivePath\.test\(path\)/)
+  assert.match(api, /String\.fromCharCode\(92\)/)
+})

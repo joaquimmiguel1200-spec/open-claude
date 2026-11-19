@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     if (!goal || goal.length > 12000) return NextResponse.json({ error: 'O objetivo Code é obrigatório.' }, { status: 400 })
     if (apply && !testCommand) return NextResponse.json({ error: 'Para aplicar e publicar alterações, informe um comando de teste. Sem teste, use a prévia de alterações sem aplicar.' }, { status: 400 })
     if (!/^[^/\s]+\/[^/\s]+$/.test(repository)) return NextResponse.json({ error: 'Informe repository no formato owner/repository.' }, { status: 400 })
-    if (requestedPaths.some((path: string) => !path || path.length > 240 || path.startsWith('/') || path.split('/').some((part) => !part || part === '..') || path.startsWith('.git/'))) return NextResponse.json({ error: 'Lista de caminhos inválida.' }, { status: 400 })
+    if (requestedPaths.some((path: string) => !path || path.length > 240 || path.startsWith('/') || path.split('/').some((part) => !part || part === '.' || part === '..') || path.includes(String.fromCharCode(92)) || path.startsWith('.git/') || sensitivePath.test(path))) return NextResponse.json({ error: 'Lista de caminhos inválida.' }, { status: 400 })
     
 
     const [owner, repo] = repository.split('/')
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const treeFiles = await github.listFiles(owner, repo, branch, request.signal)
     const sourceExtensions = /\.(tsx?|jsx?|mjs|cjs|json|css|scss|html|md|mdx|py|sql|ya?ml|toml|sh|go|rs|java|kt|swift|php|rb|vue|svelte|astro)$/i
     const excluded = /(^|\/)(node_modules|\.git|\.next|dist|build|coverage|vendor|\.turbo)(\/|$)|(^|\/)public\/.*\.(png|jpe?g|gif|webp|ico|woff2?|ttf|pdf|zip)$/i
-    const autoPaths = treeFiles.filter(file => sourceExtensions.test(file.path) && !excluded.test(file.path) && !/lock\.(json|yaml)$|\.min\.(js|css)$/i.test(file.path)).sort((a,b) => {
+    const autoPaths = treeFiles.filter(file => sourceExtensions.test(file.path) && !excluded.test(file.path) && !sensitivePath.test(file.path) && !/lock\.(json|yaml)$|\.min\.(js|css)$/i.test(file.path)).sort((a,b) => {
       const priority = (path: string) => /(^|\/)(package\.json|tsconfig\.json|next\.config|README|AGENTS\.md)$/i.test(path) ? 0 : /^(app|src|lib|components)\//.test(path) ? 1 : 2
       return priority(a.path)-priority(b.path) || a.path.localeCompare(b.path)
     })
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     const edits = plan.edits.map((edit: any) => {
       const path = String(edit?.path ?? '').trim()
       const kind = edit?.kind === 'create' ? 'create' as const : 'update' as const
-      if (!path || path.length > 240 || path.startsWith('/') || path.split('/').some((part: string) => !part || part === '..') || path.startsWith('.git/')) throw new Error(`Caminho inválido proposto pelo modelo: ${path}`)
+      if (!path || path.length > 240 || path.startsWith('/') || path.split('/').some((part: string) => !part || part === '.' || part === '..') || path.includes(String.fromCharCode(92)) || path.startsWith('.git/') || sensitivePath.test(path)) throw new Error(`Caminho inválido proposto pelo modelo: ${path}`)
       if (allowed.has(path) && kind === 'update') return { path, kind, content: String(edit?.content ?? ''), expectedSha: allowed.get(path) }
       const parent = path.includes('/') ? path.slice(0,path.lastIndexOf('/')) : ''
       if (kind === 'create' && !existingPaths.has(path) && allowedDirectories.has(parent) && !path.startsWith('.github/workflows/')) return { path, kind, content: String(edit?.content ?? '') }

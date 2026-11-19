@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     } catch (error) {
       console.warn('[cowork] dynamic planning fallback', error instanceof Error ? error.message : 'planning failed')
     }
-    const runtime = createCoworkRuntime({ taskRunner: createAgentTaskRunner(agent, { supabase }), maxConcurrency: 3 })
+    const runtime = createCoworkRuntime({ taskRunner: createAgentTaskRunner(agent, { supabase }), maxConcurrency: concurrency })
     const controller = new AbortController()
     request.signal.addEventListener('abort', () => controller.abort(), { once: true })
     if (request.signal.aborted) controller.abort()

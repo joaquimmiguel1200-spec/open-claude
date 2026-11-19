@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { requireUser } from '@/lib/supabase/server'
 import { createPersistence } from '@/lib/supabase/persistence'
 import { userAIProviders } from '@/lib/ai/user-providers'
@@ -151,10 +152,28 @@ export async function POST(request: Request) {
         return Array.isArray(revised?.edits)?revised.edits.map((x:any)=>{const old=edits.find((e:any)=>e.path===String(x.path));return {path:String(x.path),kind:'update' as const,content:String(x.content??''),expectedSha:old?.expectedSha}}):null
       }
     })
-    const result = await agent.run({ repository, branch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })
-    const summary = [String(plan.summary ?? ''), result.success ? 'Execução Code concluída.' : 'A execução Code não foi aprovada.', result.commitSha ? 'Commit: '+result.commitSha : '', (result.tests??[]).map((t:any)=>(t.success?'✓ ':'✗ ')+t.command.join(' ')).join(' | ')].filter(Boolean).join('\n\n')
-    if (chatId) { await persistence.appendMessage({chatId,userId:user.id,role:'user',content:goal,metadata:{mode:'code',repository,branch}}); await persistence.appendMessage({chatId,userId:user.id,role:'assistant',content:summary,metadata:{mode:'code',repository,branch,success:result.success,commitSha:result.commitSha??null}}) }
-    return NextResponse.json({ mode: 'code', applied: result.success, repository, branch, summary: String(plan.summary ?? ''), result, model: response.model, provider: response.provider, testCommand: testCommand||null, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
+    const sourceBranch = (await github.listBranches(owner, repo, request.signal)).find(item => item.name === branch)
+    if (!sourceBranch) return NextResponse.json({ error: 'A branch base selecionada não existe ou não está acessível.' }, { status: 404 })
+    const workingBranch = `open-claude/${Date.now()}-${randomUUID().slice(0, 8)}`
+    await github.createBranch(owner, repo, workingBranch, sourceBranch.sha, request.signal)
+    const result = await agent.run({ repository, branch: workingBranch, goal, edits, commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), ...(testConfig?{test:testConfig}: {}) })
+    let pullRequest: { number: number; htmlUrl: string; title: string } | null = null
+    let pullRequestError: string | null = null
+    if (result.success) {
+      try {
+        pullRequest = await github.createPullRequest(owner, repo, {
+          title: String(plan.summary ?? goal).slice(0, 240) || 'Open Claude Code changes',
+          body: ['## Open Claude Code', '', String(plan.summary ?? goal), '', '**Base:** ' + branch, '**Working branch:** ' + workingBranch, '', 'Changes were generated from an explicit user-approved preview and passed the configured sandbox test command.', '', '### Test command', '`' + testCommand + '`'].join('\n'),
+          head: workingBranch,
+          base: branch,
+        }, request.signal)
+      } catch (error) {
+        pullRequestError = error instanceof Error ? error.message : 'Não foi possível abrir o pull request.'
+      }
+    }
+    const summary = [String(plan.summary ?? ''), result.success ? 'Alterações aplicadas em uma branch isolada.' : 'A execução Code não foi aprovada.', 'Branch de trabalho: ' + workingBranch, result.commitSha ? 'Commit: '+result.commitSha : '', pullRequest ? 'Pull request: ' + pullRequest.htmlUrl : pullRequestError ? 'Aviso: ' + pullRequestError : '', (result.tests??[]).map((t:any)=>(t.success?'✓ ':'✗ ')+t.command.join(' ')).join(' | ')].filter(Boolean).join('\n\n')
+    if (chatId) { await persistence.appendMessage({chatId,userId:user.id,role:'user',content:goal,metadata:{mode:'code',repository,branch:workingBranch,baseBranch:branch}}); await persistence.appendMessage({chatId,userId:user.id,role:'assistant',content:summary,metadata:{mode:'code',repository,branch:workingBranch,baseBranch:branch,success:result.success,commitSha:result.commitSha??null,pullRequestUrl:pullRequest?.htmlUrl??null}}) }
+    return NextResponse.json({ mode: 'code', applied: result.success, repository, branch: workingBranch, baseBranch: branch, pullRequest, pullRequestError, summary, result, model: response.model, provider: response.provider, testCommand: testCommand||null, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { status: result.success ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const detail = error instanceof Error ? error.message : ''
     console.error('[code] request failed', { message: detail.slice(0, 300) })

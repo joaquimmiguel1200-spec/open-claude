@@ -114,3 +114,12 @@ test('Code and Cowork terminals share the same isolated project or chat workspac
   assert.ok(cowork.includes('workspace:chat:${chatId}'))
   assert.ok(terminal.includes('(input.files ?? []).slice(0, 50)'))
 })
+
+
+test('Code applies changes on an isolated branch and opens a pull request to the selected base', async () => {
+  const api = await source('app/api/code/route.ts')
+  assert.match(api, /github\.createBranch\(owner, repo, workingBranch, sourceBranch\.sha/)
+  assert.match(api, /agent\.run\(\{ repository, branch: workingBranch/)
+  assert.match(api, /github\.createPullRequest\(owner, repo/)
+  assert.match(api, /base: branch/)
+})

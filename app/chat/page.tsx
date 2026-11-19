@@ -78,7 +78,7 @@ export default function ChatPage() {
       const data=await response.json().catch(()=>({}));
       if(!response.ok){const detail=data.error||data.result?.error||'Os testes falharam. Nenhuma alteração foi publicada.';setAnswer(detail);setConversationMessages(current=>[...current,{role:'assistant',content:detail}]);return}
       const tests=(data.result?.tests??[]).map((test:any)=>(test.success?'✓ ':'✗ ')+test.command.join(' ')).join(' | ');
-      const report=[data.summary||'Alterações aplicadas.',data.result?.commitSha?'Commit: '+data.result.commitSha:'',tests?'Testes: '+tests:''].filter(Boolean).join('\n\n');
+      const report=[data.summary||'Alterações aplicadas.',data.result?.commitSha?'Commit: '+data.result.commitSha:'',data.pullRequest?.htmlUrl?'Pull request: '+data.pullRequest.htmlUrl:'',data.pullRequestError?'Aviso: '+data.pullRequestError:'',tests?'Testes: '+tests:''].filter(Boolean).join('\n\n');
       setAnswer(report);setConversationMessages(current=>[...current,{role:'assistant',content:report}]);setCodePreview(null);loadWorkspace();
     }catch{setAnswer('Falha de conexão ao validar e aplicar as alterações.')}finally{setCodeApplying(false)}
   }

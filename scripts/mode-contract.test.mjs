@@ -100,5 +100,6 @@ test('Workspace navigation follows the dashboard sequence and current brand them
   const chat = await source('app/chat/page.tsx')
   assert.match(chat, /label:'Início'.*label:'Projetos'.*label:'Chat'.*label:'Code'.*label:'Cowork'.*label:'Agentes'/s)
   assert.match(chat, /Final workspace navigation tokens/)
-  assert.doesNotMatch(chat, /#292521!important/)
+  assert.match(chat, /\\.claude-sidebar\\{background:linear-gradient\\(180deg,#10182d/)
+  assert.match(chat, /\\.claude-nav button\\.active/)
 })

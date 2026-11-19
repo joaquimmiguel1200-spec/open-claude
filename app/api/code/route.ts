@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     if (!goal || goal.length > 12000) return NextResponse.json({ error: 'O objetivo Code é obrigatório.' }, { status: 400 })
     if (apply && !testCommand) return NextResponse.json({ error: 'Para aplicar e publicar alterações, informe um comando de teste. Sem teste, use a prévia de alterações sem aplicar.' }, { status: 400 })
     if (!/^[^/\s]+\/[^/\s]+$/.test(repository)) return NextResponse.json({ error: 'Informe repository no formato owner/repository.' }, { status: 400 })
+    if (requestedPaths.some((path: string) => !path || path.length > 240 || path.startsWith('/') || path.split('/').some((part) => !part || part === '..') || path.startsWith('.git/'))) return NextResponse.json({ error: 'Lista de caminhos inválida.' }, { status: 400 })
     
 
     const [owner, repo] = repository.split('/')

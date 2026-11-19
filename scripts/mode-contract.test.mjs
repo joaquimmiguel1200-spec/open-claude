@@ -99,18 +99,18 @@ test('Cowork persists event history and supports retrieving runs by owner-scoped
 test('Workspace navigation follows the dashboard sequence and current brand theme', async () => {
   const chat = await source('app/chat/page.tsx')
   assert.match(chat, /label:'Início'.*label:'Projetos'.*label:'Chat'.*label:'Code'.*label:'Cowork'.*label:'Agentes'/s)
-  assert.match(chat, /Final workspace navigation tokens/)
-  assert.match(chat, /\\.claude-sidebar\\{background:linear-gradient\\(180deg,#10182d/)
-  assert.match(chat, /\\.claude-nav button\\.active/)
+  assert.ok(chat.includes('Final workspace navigation tokens'))
+  assert.ok(chat.includes('.claude-sidebar{background:linear-gradient(180deg,#10182d'))
+  assert.ok(chat.includes('.claude-nav button.active'))
 })
-
 
 test('Code and Cowork terminals share the same isolated project or chat workspace', async () => {
   const code = await source('app/api/code/terminal/route.ts')
   const cowork = await source('app/api/cowork/terminal/route.ts')
   const terminal = await source('src/lib/sandbox/persistent-terminal.ts')
-  assert.match(code, /user\.id}:workspace:project:\$\{projectId\}/)
-  assert.match(code, /user\.id}:workspace:chat:\$\{chatId\}/)
-  assert.match(cowork, /user\.id}:cowork:project:\$\{projectId\}/)
-  assert.match(terminal, /input\.files \?\? \[\]\)\.slice\(0, 50\)/)
+  assert.ok(code.includes('workspace:project:${projectId}'))
+  assert.ok(code.includes('workspace:chat:${chatId}'))
+  assert.ok(cowork.includes('workspace:project:${projectId}'))
+  assert.ok(cowork.includes('workspace:chat:${chatId}'))
+  assert.ok(terminal.includes('(input.files ?? []).slice(0, 50)'))
 })

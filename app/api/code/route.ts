@@ -53,6 +53,7 @@ export async function POST(request: Request) {
     const treeFiles = await github.listFiles(owner, repo, branch, request.signal)
     const sourceExtensions = /\.(tsx?|jsx?|mjs|cjs|json|css|scss|html|md|mdx|py|sql|ya?ml|toml|sh|go|rs|java|kt|swift|php|rb|vue|svelte|astro)$/i
     const excluded = /(^|\/)(node_modules|\.git|\.next|dist|build|coverage|vendor|\.turbo)(\/|$)|(^|\/)public\/.*\.(png|jpe?g|gif|webp|ico|woff2?|ttf|pdf|zip)$/i
+    const sensitivePath = /(^|\/)(\.env(?:\..*)?|\.npmrc|\.pypirc|id_rsa|id_ed25519|credentials(?:\.json)?|service[-_]?account[^/]*\.json|secrets?[^/]*\.(json|ya?ml)|[^/]*\.(pem|key|p12|pfx|tfstate))$/i
     const autoPaths = treeFiles.filter(file => sourceExtensions.test(file.path) && !excluded.test(file.path) && !sensitivePath.test(file.path) && !/lock\.(json|yaml)$|\.min\.(js|css)$/i.test(file.path)).sort((a,b) => {
       const priority = (path: string) => /(^|\/)(package\.json|tsconfig\.json|next\.config|README|AGENTS\.md)$/i.test(path) ? 0 : /^(app|src|lib|components)\//.test(path) ? 1 : 2
       return priority(a.path)-priority(b.path) || a.path.localeCompare(b.path)

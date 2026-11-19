@@ -99,6 +99,16 @@ export function createGitHubClient(options: GitHubClientOptions): GitHubClient {
       const data = await request<any[]>(`/repos/${encodeURIComponent(r.owner)}/${encodeURIComponent(r.repo)}/branches?per_page=100`, {}, signal)
       return data.map((b) => ({ name: b.name, sha: b.commit.sha, protected: Boolean(b.protected) })) satisfies GitHubBranch[]
     },
+    async listFiles(owner, repo, ref, signal) {
+      const r = assertRepo(owner, repo)
+      const repository = await request<any>(`/repos/${encodeURIComponent(r.owner)}/${encodeURIComponent(r.repo)}`, {}, signal)
+      const branch = await request<any>(`/repos/${encodeURIComponent(r.owner)}/${encodeURIComponent(r.repo)}/branches/${encodeURIComponent(ref || repository.default_branch)}`, {}, signal)
+      const treeSha = branch.commit?.commit?.tree?.sha
+      if (typeof treeSha !== 'string' || !treeSha) throw new Error('Could not resolve the selected GitHub branch tree.')
+      const tree = await request<any>(`/repos/${encodeURIComponent(r.owner)}/${encodeURIComponent(r.repo)}/git/trees/${treeSha}?recursive=1`, {}, signal)
+      if (tree.truncated) throw new Error('Repository tree is too large for a complete workspace scan. Specify the exact files or directories to inspect.')
+      return (tree.tree ?? []).filter((item: any) => item.type === 'blob' && typeof item.path === 'string' && Number(item.size ?? 0) <= 180_000).map((item: any) => ({ path: item.path, size: Number(item.size ?? 0), sha: String(item.sha), type: 'blob' as const }))
+    },
     async getFile(owner, repo, path, ref, signal) {
       const r = assertRepo(owner, repo)
       const cleanPath = path.trim().replace(/^\/+/, '')

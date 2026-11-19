@@ -59,3 +59,92 @@ test('Persistent terminal validates paths and isolates workspace names by user s
   assert.match(terminal, /part === '\.\.'/)
   assert.match(terminal, /createHash\('sha256'\)\.update\(input\.scope\)/)
 })
+
+
+test('Cowork creates a task plan dynamically and validates dependency graphs', async () => {
+  const planner = await source('src/lib/cowork/cowork-planner.ts')
+  const runtime = await source('src/lib/cowork/cowork-runtime.ts')
+  const route = await source('app/api/cowork/route.ts')
+  assert.match(planner, /export function parseCoworkPlan/)
+  assert.match(planner, /const visit = \(id: string\): boolean/)
+  assert.match(runtime, /input\.plan \?\? createCoworkPlan/)
+  assert.match(route, /mode: 'cowork-planning'/)
+  assert.match(route, /dynamicPlanUsed/)
+})
+
+
+test('Code can discover a repository workspace when no paths are supplied', async () => {
+  const types = await source('src/types/github.ts')
+  const github = await source('src/lib/github/github-client.ts')
+  const api = await source('app/api/code/route.ts')
+  const terminal = await source('app/api/code/terminal/route.ts')
+  assert.match(types, /listFiles\(/)
+  assert.match(github, /branches\/\$\{encodeURIComponent\(ref \|\| repository\.default_branch\)\}/)
+  assert.match(api, /const candidatePaths = requestedPaths\.length \? requestedPaths : autoPaths/)
+  assert.match(api, /allowedDirectories/)
+  assert.match(terminal, /requestedPaths\.length \? requestedPaths : tree/)
+})
+
+
+test('Cowork persists event history and supports retrieving runs by owner-scoped API', async () => {
+  const api = await source('app/api/cowork/route.ts')
+  const migration = await source('supabase/migrations/20261119013039_cowork_run_persistence.sql')
+  assert.match(api, /from\('cowork_runs'\)\.upsert/)
+  assert.match(api, /export async function GET/)
+  assert.match(api, /\.eq\('user_id', user\.id\)/)
+  assert.match(migration, /enable row level security/)
+  assert.match(migration, /auth\.uid\(\)/)
+})
+
+test('Workspace navigation follows the dashboard sequence and current brand theme', async () => {
+  const chat = await source('app/chat/page.tsx')
+  assert.match(chat, /label:'Início'.*label:'Projetos'.*label:'Chat'.*label:'Code'.*label:'Cowork'.*label:'Agentes'/s)
+  assert.ok(chat.includes('Final workspace navigation tokens'))
+  assert.ok(chat.includes('.claude-sidebar{background:linear-gradient(180deg,#10182d'))
+  assert.ok(chat.includes('.claude-nav button.active'))
+})
+
+test('Code and Cowork terminals share the same isolated project or chat workspace', async () => {
+  const code = await source('app/api/code/terminal/route.ts')
+  const cowork = await source('app/api/cowork/terminal/route.ts')
+  const terminal = await source('src/lib/sandbox/persistent-terminal.ts')
+  assert.ok(code.includes('workspace:project:${projectId}'))
+  assert.ok(code.includes('workspace:chat:${chatId}'))
+  assert.ok(cowork.includes('workspace:project:${projectId}'))
+  assert.ok(cowork.includes('workspace:chat:${chatId}'))
+  assert.ok(terminal.includes('(input.files ?? []).slice(0, 50)'))
+})
+
+
+test('Code applies changes on an isolated branch and opens a pull request to the selected base', async () => {
+  const api = await source('app/api/code/route.ts')
+  assert.match(api, /github\.createBranch\(owner, repo, workingBranch, sourceBranch\.sha/)
+  assert.match(api, /agent\.run\(\{ repository, branch: workingBranch/)
+  assert.match(api, /github\.createPullRequest\(owner, repo/)
+  assert.match(api, /base: branch/)
+})
+
+
+test('Cowork clamps malformed task and concurrency limits safely', async () => {
+  const planner = await source('src/lib/cowork/cowork-planner.ts')
+  const route = await source('app/api/cowork/route.ts')
+  assert.match(planner, /Number\.isFinite\(maxTasks\)/)
+  assert.match(route, /Number\.isFinite\(requestedMaxTasks\)/)
+  assert.match(route, /Number\.isFinite\(requestedConcurrency\)/)
+})
+
+test('Code validates requested and generated paths and bounds repository context size', async () => {
+  const api = await source('app/api/code/route.ts')
+  assert.match(api, /requestedPaths\.some\(\(path: string\) => !path/)
+  assert.match(api, /contextBytes \+ treeFile\.size > 160_000/)
+  assert.match(api, /Caminho inválido proposto pelo modelo/)
+})
+
+
+test('Code excludes credentials, environment files and private keys from repository context and edits', async () => {
+  const api = await source('app/api/code/route.ts')
+  assert.match(api, /const sensitivePath =/)
+  assert.match(api, /!sensitivePath\.test\(file\.path\)/)
+  assert.match(api, /sensitivePath\.test\(path\)/)
+  assert.match(api, /String\.fromCharCode\(92\)/)
+})

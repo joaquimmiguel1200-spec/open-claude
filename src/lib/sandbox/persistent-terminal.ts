@@ -56,7 +56,7 @@ export async function runPersistentTerminal(input: {
   }
 
   try {
-    for (const file of (input.files ?? []).slice(0, 20)) {
+    for (const file of (input.files ?? []).slice(0, 50)) {
       const path = safePath(file.path)
       if (Buffer.byteLength(file.content, 'utf8') > MAX_FILE_BYTES) {
         throw new Error(`Arquivo grande demais para o terminal: ${path}`)

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       if (!project) return NextResponse.json({ error: 'Projeto não encontrado ou não autorizado.' }, { status: 403 })
     }
 
-    const scope = projectId ? `${user.id}:cowork:project:${projectId}` : chatId ? `${user.id}:cowork:chat:${chatId}` : `${user.id}:cowork:default`
+    const scope = projectId ? `${user.id}:workspace:project:${projectId}` : chatId ? `${user.id}:workspace:chat:${chatId}` : `${user.id}:workspace:default`
     const result = await runPersistentTerminal({ scope, command, signal: request.signal, timeoutMs: 120_000 })
     return NextResponse.json({
       ok: result.status === 'completed',

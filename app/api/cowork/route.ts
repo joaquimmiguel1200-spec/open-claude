@@ -39,6 +39,8 @@ export async function POST(request: Request) {
     request.signal.addEventListener('abort', () => controller.abort(), { once: true })
     if (request.signal.aborted) controller.abort()
 
+    const persistedEvents: any[] = []
+    let persistQueue: Promise<void> = Promise.resolve()
     const result = await runtime.run({
       userId: user.id,
       projectId: typeof body?.projectId === 'string' ? body.projectId : null,
@@ -49,7 +51,27 @@ export async function POST(request: Request) {
       maxTasks: Math.max(1, Math.min(Number(body?.maxTasks ?? 5), 8)),
       concurrency: Math.max(1, Math.min(Number(body?.concurrency ?? 3), 4)),
       signal: controller.signal,
+    }, (event) => {
+      persistedEvents.push(event)
+      const eventStatus = event.type === 'run.completed' ? 'completed' : event.type === 'run.failed' ? 'failed' : event.type === 'run.cancelled' ? 'cancelled' : event.type === 'run.created' ? 'planning' : 'running'
+      persistQueue = persistQueue.then(async () => {
+        const { error } = await supabase.from('cowork_runs').upsert({
+          id: event.runId,
+          user_id: user.id,
+          project_id: typeof body?.projectId === 'string' ? body.projectId : null,
+          chat_id: typeof body?.chatId === 'string' ? body.chatId : null,
+          goal,
+          status: eventStatus,
+          plan: dynamicPlan ?? { goal: executionGoal, tasks: [] },
+          events: persistedEvents.slice(-100),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' })
+        if (error) console.error('[cowork] event persistence failed', error.message)
+      })
     })
+    await persistQueue
+    const { error: finalPersistError } = await supabase.from('cowork_runs').update({ status: result.status, plan: result.plan, events: result.events, error: result.error ?? null, updated_at: new Date().toISOString() }).eq('id', result.runId).eq('user_id', user.id)
+    if (finalPersistError) console.error('[cowork] final persistence failed', finalPersistError.message)
 
     const persistence = createPersistence(supabase)
     if (body?.chatId) {
@@ -94,5 +116,24 @@ export async function POST(request: Request) {
     const noProvider = /NO_PROVIDER|no provider|not configured|no ai model is available/i.test(detail)
     const message = unauthenticated ? 'Não autenticado.' : noProvider ? 'Nenhum provedor de IA configurado. Adicione e teste uma API em Configurações.' : 'Não foi possível executar o Cowork. Confira a API e as integrações autorizadas.'
     return NextResponse.json({ error: message }, { status: unauthenticated ? 401 : 500, headers: { 'Cache-Control': 'no-store' } })
+  }
+}
+
+
+export async function GET(request: Request) {
+  try {
+    const { user, supabase } = await requireUser()
+    const url = new URL(request.url)
+    const runId = url.searchParams.get('runId')
+    const chatId = url.searchParams.get('chatId')
+    let query = supabase.from('cowork_runs').select('id,project_id,chat_id,goal,status,plan,events,error,created_at,updated_at').eq('user_id', user.id)
+    if (runId) query = query.eq('id', runId)
+    if (chatId) query = query.eq('chat_id', chatId)
+    const { data, error } = await query.order('updated_at', { ascending: false }).limit(runId ? 1 : 10)
+    if (error) return NextResponse.json({ error: 'Não foi possível recuperar o histórico Cowork.' }, { status: 500 })
+    return NextResponse.json({ runs: data ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
+  } catch (error) {
+    const unauthenticated = error instanceof Error && error.message === 'UNAUTHENTICATED'
+    return NextResponse.json({ error: unauthenticated ? 'Não autenticado.' : 'Não foi possível recuperar o histórico Cowork.' }, { status: unauthenticated ? 401 : 500 })
   }
 }

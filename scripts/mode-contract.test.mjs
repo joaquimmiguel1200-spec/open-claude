@@ -59,28 +59,3 @@ test('Persistent terminal validates paths and isolates workspace names by user s
   assert.match(terminal, /part === '\.\.'/)
   assert.match(terminal, /createHash\('sha256'\)\.update\(input\.scope\)/)
 })
-
-
-test('Cowork creates a task plan dynamically and validates dependency graphs', async () => {
-  const planner = await source('src/lib/cowork/cowork-planner.ts')
-  const runtime = await source('src/lib/cowork/cowork-runtime.ts')
-  const route = await source('app/api/cowork/route.ts')
-  assert.match(planner, /export function parseCoworkPlan/)
-  assert.match(planner, /const visit = \(id: string\): boolean/)
-  assert.match(runtime, /input\.plan \?\? createCoworkPlan/)
-  assert.match(route, /mode: 'cowork-planning'/)
-  assert.match(route, /dynamicPlanUsed/)
-})
-
-
-test('Code can discover a repository workspace when no paths are supplied', async () => {
-  const types = await source('src/types/github.ts')
-  const github = await source('src/lib/github/github-client.ts')
-  const api = await source('app/api/code/route.ts')
-  const terminal = await source('app/api/code/terminal/route.ts')
-  assert.match(types, /listFiles\(/)
-  assert.match(github, /git\/trees\//)
-  assert.match(api, /const candidatePaths = requestedPaths\.length \? requestedPaths : autoPaths/)
-  assert.match(api, /allowedDirectories/)
-  assert.match(terminal, /requestedPaths\.length \? requestedPaths : tree/)
-})

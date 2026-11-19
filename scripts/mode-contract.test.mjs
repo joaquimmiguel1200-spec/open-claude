@@ -79,7 +79,7 @@ test('Code can discover a repository workspace when no paths are supplied', asyn
   const api = await source('app/api/code/route.ts')
   const terminal = await source('app/api/code/terminal/route.ts')
   assert.match(types, /listFiles\(/)
-  assert.match(github, /git\/trees\//)
+  assert.match(github, /branches\/\$\{encodeURIComponent\(ref \|\| repository\.default_branch\)\}/)
   assert.match(api, /const candidatePaths = requestedPaths\.length \? requestedPaths : autoPaths/)
   assert.match(api, /allowedDirectories/)
   assert.match(terminal, /requestedPaths\.length \? requestedPaths : tree/)

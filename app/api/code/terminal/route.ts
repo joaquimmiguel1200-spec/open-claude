@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         files.push({ path: file.path, content: file.content })
       }
     }
-    const scope = repository ? `${user.id}:code:${repository.toLowerCase()}:${branch}` : projectId ? `${user.id}:code:project:${projectId}` : chatId ? `${user.id}:code:chat:${chatId}` : `${user.id}:code:default`
+    const scope = projectId ? `${user.id}:workspace:project:${projectId}` : chatId ? `${user.id}:workspace:chat:${chatId}` : repository ? `${user.id}:workspace:repository:${repository.toLowerCase()}:${branch}` : `${user.id}:workspace:default`
     const result = await runPersistentTerminal({ scope, command, files, signal: request.signal, timeoutMs: 120_000 })
     return NextResponse.json({
       ok: result.status === 'completed',

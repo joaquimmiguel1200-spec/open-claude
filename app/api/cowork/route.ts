@@ -36,7 +36,10 @@ export async function POST(request: Request) {
     const projectInstructions = typeof projectSettings?.instructions==='string'&&projectSettings.instructions.trim() ? 'PROJECT INSTRUCTIONS:\n'+projectSettings.instructions.trim() : ''
     const executionGoal = [goal, projectInstructions, skillInstructions.length ? 'ACTIVE COWORK SKILLS:\n' + skillInstructions.join('\n\n') : '', specialistBrief, mcpResults.length ? 'MODE-ALLOWLISTED READ-ONLY MCP RESULTS:\n' + mcpResults.join('\n\n') : ''].filter(Boolean).join('\n\n')
     const agent = createAgentRuntime({ providers })
-    const maxTasks = Math.max(1, Math.min(Number(body?.maxTasks ?? 5), 8))
+    const requestedMaxTasks = Number(body?.maxTasks ?? 5)
+    const maxTasks = Number.isFinite(requestedMaxTasks) ? Math.max(1, Math.min(Math.floor(requestedMaxTasks), 8)) : 5
+    const requestedConcurrency = Number(body?.concurrency ?? 3)
+    const concurrency = Number.isFinite(requestedConcurrency) ? Math.max(1, Math.min(Math.floor(requestedConcurrency), 4)) : 3
     let dynamicPlan: ReturnType<typeof parseCoworkPlan> | undefined
     let dynamicPlanUsed = false
     try {
@@ -69,7 +72,7 @@ export async function POST(request: Request) {
       model,
       strategy,
       maxTasks,
-      concurrency: Math.max(1, Math.min(Number(body?.concurrency ?? 3), 4)),
+      concurrency,
       signal: controller.signal,
     }, (event) => {
       persistedEvents.push(event)

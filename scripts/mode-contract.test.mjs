@@ -123,3 +123,19 @@ test('Code applies changes on an isolated branch and opens a pull request to the
   assert.match(api, /github\.createPullRequest\(owner, repo/)
   assert.match(api, /base: branch/)
 })
+
+
+test('Cowork clamps malformed task and concurrency limits safely', async () => {
+  const planner = await source('src/lib/cowork/cowork-planner.ts')
+  const route = await source('app/api/cowork/route.ts')
+  assert.match(planner, /Number\.isFinite\(maxTasks\)/)
+  assert.match(route, /Number\.isFinite\(requestedMaxTasks\)/)
+  assert.match(route, /Number\.isFinite\(requestedConcurrency\)/)
+})
+
+test('Code validates requested and generated paths and bounds repository context size', async () => {
+  const api = await source('app/api/code/route.ts')
+  assert.match(api, /requestedPaths\.some\(\(path: string\) => !path/)
+  assert.match(api, /contextBytes \+ treeFile\.size > 160_000/)
+  assert.match(api, /Caminho inválido proposto pelo modelo/)
+})

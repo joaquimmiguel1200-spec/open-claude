@@ -11,7 +11,8 @@ export function createCoworkPlan(goal: string, maxTasks = 5): CoworkPlan {
     ['Validate', 'Check outputs against the objective and constraints.'],
     ['Finalize', 'Prepare the final result and report important outcomes.'],
   ]
-  const count = Math.max(1, Math.min(maxTasks, titles.length))
+  const requestedCount = Number.isFinite(maxTasks) ? Math.floor(maxTasks) : 5
+  const count = Math.max(1, Math.min(requestedCount, titles.length))
   const tasks: CoworkTask[] = titles.slice(0, count).map(([title, objective]) => ({ id: randomUUID(), title, objective, status: 'pending', dependsOn: [] }))
   for (let i = 1; i < tasks.length; i++) tasks[i].dependsOn = [tasks[i - 1].id]
   return { goal: normalized, tasks }
@@ -23,7 +24,7 @@ export function parseCoworkPlan(goal: string, value: unknown, maxTasks = 5): Cow
   const fallback = () => createCoworkPlan(goal, maxTasks)
   if (!value || typeof value !== 'object' || !Array.isArray((value as any).tasks)) return fallback()
   const raw = (value as any).tasks as any[]
-  const limit = Math.max(1, Math.min(Math.floor(maxTasks), 8))
+  const limit = Number.isFinite(maxTasks) ? Math.max(1, Math.min(Math.floor(maxTasks), 8)) : 5
   if (!raw.length || raw.length > limit) return fallback()
   const ids = new Set<string>()
   const tasks: CoworkTask[] = []

@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     for (const path of candidatePaths) {
       const treeFile = treeFiles.find(file => file.path === path)
       if (!treeFile) return NextResponse.json({ error: 'Caminho não encontrado no repositório: ' + path }, { status: 400 })
-      if (treeFile.size > 120_000 || contextBytes + treeFile.size > 320_000) continue
+      if (treeFile.size > 120_000 || contextBytes + treeFile.size > 160_000) continue
       const file = await github.getFile(owner, repo, path, branch, request.signal)
       contextBytes += Buffer.byteLength(file.content, 'utf8')
       snapshots.push({ path: file.path, sha: file.sha, content: file.content })
@@ -120,6 +120,7 @@ export async function POST(request: Request) {
     const edits = plan.edits.map((edit: any) => {
       const path = String(edit?.path ?? '').trim()
       const kind = edit?.kind === 'create' ? 'create' as const : 'update' as const
+      if (!path || path.length > 240 || path.startsWith('/') || path.split('/').some((part: string) => !part || part === '..') || path.startsWith('.git/')) throw new Error(`Caminho inválido proposto pelo modelo: ${path}`)
       if (allowed.has(path) && kind === 'update') return { path, kind, content: String(edit?.content ?? ''), expectedSha: allowed.get(path) }
       const parent = path.includes('/') ? path.slice(0,path.lastIndexOf('/')) : ''
       if (kind === 'create' && !existingPaths.has(path) && allowedDirectories.has(parent) && !path.startsWith('.github/workflows/')) return { path, kind, content: String(edit?.content ?? '') }

@@ -4,6 +4,8 @@ import { userAIProviders } from '@/lib/ai/user-providers'
 import { createAgentRuntime } from '@/lib/agent/agent-runtime'
 import { createAgentTaskRunner } from '@/lib/cowork/agent-task-runner'
 import { createCoworkRuntime } from '@/lib/cowork/cowork-runtime'
+import { parseCoworkPlan } from '@/lib/cowork/cowork-planner'
+import { generateAI } from '@/lib/ai'
 import { createPersistence } from '@/lib/supabase/persistence'
 import { runAgentProfiles } from '@/lib/agent/profile-orchestrator'
 import { loadModeSkillInstructions } from '@/lib/skills/mode-skill-loader'
@@ -34,6 +36,23 @@ export async function POST(request: Request) {
     const projectInstructions = typeof projectSettings?.instructions==='string'&&projectSettings.instructions.trim() ? 'PROJECT INSTRUCTIONS:\n'+projectSettings.instructions.trim() : ''
     const executionGoal = [goal, projectInstructions, skillInstructions.length ? 'ACTIVE COWORK SKILLS:\n' + skillInstructions.join('\n\n') : '', specialistBrief, mcpResults.length ? 'MODE-ALLOWLISTED READ-ONLY MCP RESULTS:\n' + mcpResults.join('\n\n') : ''].filter(Boolean).join('\n\n')
     const agent = createAgentRuntime({ providers })
+    const maxTasks = Math.max(1, Math.min(Number(body?.maxTasks ?? 5), 8))
+    let dynamicPlan: ReturnType<typeof parseCoworkPlan> | undefined
+    let dynamicPlanUsed = false
+    try {
+      const planning = await generateAI({
+        model, strategy, signal: request.signal, maxTokens: 3000,
+        messages: [
+          { role: 'system', content: 'You are the Open Claude Cowork planner. Convert the objective into a concise, executable task DAG. Return ONLY JSON: {"tasks":[{"id":"task-1","title":"...","objective":"...","dependsOn":[]}]} . Use 2-8 tasks as appropriate, independent tasks should have no dependency, and only add dependencies when necessary. Include explicit validation and delivery tasks when useful. Never claim tools have already run.' },
+          { role: 'user', content: 'OBJECTIVE:\n' + executionGoal + '\n\nMAX TASKS: ' + maxTasks },
+        ],
+        metadata: { mode: 'cowork-planning', userId: user.id, projectId: body?.projectId ?? null },
+      }, providers)
+      const raw = planning.content.match(/\{[\s\S]*\}/)?.[0]
+      if (raw) { dynamicPlan = parseCoworkPlan(executionGoal, JSON.parse(raw), maxTasks); dynamicPlanUsed = true }
+    } catch (error) {
+      console.warn('[cowork] dynamic planning fallback', error instanceof Error ? error.message : 'planning failed')
+    }
     const runtime = createCoworkRuntime({ taskRunner: createAgentTaskRunner(agent, { supabase }), maxConcurrency: 3 })
     const controller = new AbortController()
     request.signal.addEventListener('abort', () => controller.abort(), { once: true })
@@ -46,15 +65,17 @@ export async function POST(request: Request) {
       projectId: typeof body?.projectId === 'string' ? body.projectId : null,
       chatId: typeof body?.chatId === 'string' ? body.chatId : null,
       goal: executionGoal,
+      plan: dynamicPlan,
       model,
       strategy,
-      maxTasks: Math.max(1, Math.min(Number(body?.maxTasks ?? 5), 8)),
+      maxTasks,
       concurrency: Math.max(1, Math.min(Number(body?.concurrency ?? 3), 4)),
       signal: controller.signal,
     }, (event) => {
       persistedEvents.push(event)
       const eventStatus = event.type === 'run.completed' ? 'completed' : event.type === 'run.failed' ? 'failed' : event.type === 'run.cancelled' ? 'cancelled' : event.type === 'run.created' ? 'planning' : 'running'
       persistQueue = persistQueue.then(async () => {
+        try {
         const { error } = await supabase.from('cowork_runs').upsert({
           id: event.runId,
           user_id: user.id,
@@ -67,6 +88,7 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
         }, { onConflict: 'id' })
         if (error) console.error('[cowork] event persistence failed', error.message)
+        } catch (error) { console.error('[cowork] event persistence exception', error instanceof Error ? error.message : 'unknown error') }
       })
     })
     await persistQueue
@@ -107,6 +129,7 @@ export async function POST(request: Request) {
       plan: result.plan,
       events: result.events,
       specialistAgents: specialistAgents.map(({id,name,model,provider})=>({id,name,model,provider})),
+      dynamicPlanUsed,
       error: result.error,
     }, { status: result.status === 'completed' ? 200 : 422, headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {

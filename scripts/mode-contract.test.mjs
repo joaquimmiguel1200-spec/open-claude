@@ -71,3 +71,16 @@ test('Cowork creates a task plan dynamically and validates dependency graphs', a
   assert.match(route, /mode: 'cowork-planning'/)
   assert.match(route, /dynamicPlanUsed/)
 })
+
+
+test('Code can discover a repository workspace when no paths are supplied', async () => {
+  const types = await source('src/types/github.ts')
+  const github = await source('src/lib/github/github-client.ts')
+  const api = await source('app/api/code/route.ts')
+  const terminal = await source('app/api/code/terminal/route.ts')
+  assert.match(types, /listFiles\(/)
+  assert.match(github, /git\/trees\//)
+  assert.match(api, /const candidatePaths = requestedPaths\.length \? requestedPaths : autoPaths/)
+  assert.match(api, /allowedDirectories/)
+  assert.match(terminal, /requestedPaths\.length \? requestedPaths : tree/)
+})

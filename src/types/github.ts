@@ -14,6 +14,8 @@ export interface GitHubBranch {
   protected: boolean
 }
 
+export interface GitHubTreeFile { path: string; size: number; sha: string; type: 'blob' }
+
 export interface GitHubFile {
   path: string
   sha: string
@@ -71,6 +73,7 @@ export interface GitHubClient {
   getRepository(owner: string, repo: string, signal?: AbortSignal): Promise<GitHubRepository>
   listBranches(owner: string, repo: string, signal?: AbortSignal): Promise<GitHubBranch[]>
   getFile(owner: string, repo: string, path: string, ref?: string, signal?: AbortSignal): Promise<GitHubFile>
+  listFiles(owner: string, repo: string, ref?: string, signal?: AbortSignal): Promise<GitHubTreeFile[]>
   searchCode(query: string, signal?: AbortSignal): Promise<GitHubCodeSearchResult>
   createBranch(owner: string, repo: string, branch: string, sha: string, signal?: AbortSignal): Promise<{ name: string; sha: string }>
   createOrUpdateFile(owner: string, repo: string, path: string, content: string, message: string, branch: string, sha?: string, signal?: AbortSignal): Promise<{ commitSha: string; contentSha: string }>

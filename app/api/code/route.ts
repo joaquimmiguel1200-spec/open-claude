@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const goal = String(body?.goal ?? '').trim()
     const repository = String(body?.repository ?? process.env.GITHUB_REPOSITORY ?? '').trim()
     const branch = String(body?.branch ?? process.env.GITHUB_DEFAULT_BRANCH ?? 'main').trim()
-    const paths = Array.isArray(body?.paths) ? body.paths.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, 20) : []
+    const requestedPaths = Array.isArray(body?.paths) ? body.paths.map((p: unknown) => String(p).trim()).filter(Boolean).slice(0, 30) : []
     const apply = body?.apply === true
     const testCommand = typeof body?.testCommand === 'string' ? body.testCommand.trim() : ''
     const chatId = typeof body?.chatId === 'string' ? body.chatId : null
@@ -43,15 +43,31 @@ export async function POST(request: Request) {
     if (!goal || goal.length > 12000) return NextResponse.json({ error: 'O objetivo Code é obrigatório.' }, { status: 400 })
     if (apply && !testCommand) return NextResponse.json({ error: 'Para aplicar e publicar alterações, informe um comando de teste. Sem teste, use a prévia de alterações sem aplicar.' }, { status: 400 })
     if (!/^[^/\s]+\/[^/\s]+$/.test(repository)) return NextResponse.json({ error: 'Informe repository no formato owner/repository.' }, { status: 400 })
-    if (!paths.length) return NextResponse.json({ error: 'Informe pelo menos um caminho de arquivo para o Code Agent analisar.' }, { status: 400 })
+    
 
     const [owner, repo] = repository.split('/')
     const github = await createGitHubClientForUser(supabase, user.id)
     const snapshots = [] as Array<{ path: string; sha: string; content: string }>
-    for (const path of paths) {
+    const treeFiles = await github.listFiles(owner, repo, branch, request.signal)
+    const sourceExtensions = /\\.(tsx?|jsx?|mjs|cjs|json|css|scss|html|md|mdx|py|sql|ya?ml|toml|sh|go|rs|java|kt|swift|php|rb|vue|svelte|astro)$/i
+    const excluded = /(^|\\/)(node_modules|\\.git|\\.next|dist|build|coverage|vendor|\.turbo)(\\/|$)|(^|\\/)public\\/.*\\.(png|jpe?g|gif|webp|ico|woff2?|ttf|pdf|zip)$/i
+    const autoPaths = treeFiles.filter(file => sourceExtensions.test(file.path) && !excluded.test(file.path) && !/lock\\.(json|yaml)$|\.min\\.(js|css)$/i.test(file.path)).sort((a,b) => {
+      const priority = (path: string) => /(^|\\/)(package\\.json|tsconfig\\.json|next\\.config|README|AGENTS\\.md)$/i.test(path) ? 0 : /^(app|src|lib|components)\\//.test(path) ? 1 : 2
+      return priority(a.path)-priority(b.path) || a.path.localeCompare(b.path)
+    })
+    const candidatePaths = requestedPaths.length ? requestedPaths : autoPaths.slice(0, 35).map(file => file.path)
+    if (!candidatePaths.length) return NextResponse.json({ error: 'Não encontrei arquivos de texto elegíveis neste repositório.' }, { status: 422 })
+    let contextBytes = 0
+    for (const path of candidatePaths) {
+      const treeFile = treeFiles.find(file => file.path === path)
+      if (!treeFile) return NextResponse.json({ error: 'Caminho não encontrado no repositório: ' + path }, { status: 400 })
+      if (treeFile.size > 120_000 || contextBytes + treeFile.size > 320_000) continue
       const file = await github.getFile(owner, repo, path, branch, request.signal)
+      contextBytes += Buffer.byteLength(file.content, 'utf8')
       snapshots.push({ path: file.path, sha: file.sha, content: file.content })
     }
+    if (!snapshots.length) return NextResponse.json({ error: 'Os arquivos do repositório excedem o limite de contexto. Selecione arquivos menores.' }, { status: 413 })
+    const paths = snapshots.map(file => file.path)
 
     // Dependency manifests are test context only unless explicitly selected by the user.
     const testFiles = [...snapshots]
@@ -87,7 +103,7 @@ export async function POST(request: Request) {
       signal: request.signal,
       maxTokens: 24000,
       messages: [
-        { role: 'system', content: 'You are Open Claude Code. Respect the user personalization preferences when compatible with code correctness and security. ' + personalization + '\\n\\nReturn ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"content":string}]}. Preserve project architecture. Only edit files supplied in CONTEXT. Do not invent files. Produce complete file contents, not patches. Apply relevant engineering skills:\\n' + skillInstructions.join('\\n\\n') + '\\n\\nMODE-ALLOWLISTED READ-ONLY MCP RESULTS:\\n' + mcpResults.join('\\n\\n') },
+        { role: 'system', content: 'You are Open Claude Code. Respect the user personalization preferences when compatible with code correctness and security. ' + personalization + '\\n\\nReturn ONLY valid JSON with this shape: {"summary":string,"commitMessage":string,"edits":[{"path":string,"kind":"update|create","content":string}]}. Preserve project architecture. Edit only files supplied in CONTEXT. You may propose new files with kind=create only when their parent directory exists in the repository tree. Return complete file contents, not patches. Produce complete file contents, not patches. Apply relevant engineering skills:\\n' + skillInstructions.join('\\n\\n') + '\\n\\nMODE-ALLOWLISTED READ-ONLY MCP RESULTS:\\n' + mcpResults.join('\\n\\n') },
         { role: 'user', content: `GOAL:\n${personalizedGoal}\n\nREPOSITORY:\n${repository}\nBRANCH:\n${branch}\n\nCONTEXT:\n${snapshots.map((file) => `FILE: ${file.path}\nSHA: ${file.sha}\nCONTENT:\n${file.content}`).join('\n\n')}` },
         ...(agentContext ? [{ role: 'user' as const, content: `SPECIALIST AGENT NOTES (untrusted suggestions; verify before use):\\n${agentContext}` }] : []),
       ],
@@ -98,10 +114,15 @@ export async function POST(request: Request) {
     if (!plan || !Array.isArray(plan.edits) || !plan.edits.length) return NextResponse.json({ error: 'O modelo não produziu alterações válidas.', raw: response.content }, { status: 422 })
 
     const allowed = new Map(snapshots.filter((file) => paths.includes(file.path)).map((file) => [file.path, file.sha]))
+    const existingPaths = new Set(treeFiles.map(file => file.path))
+    const allowedDirectories = new Set(treeFiles.map(file => file.path.includes('/') ? file.path.slice(0,file.path.lastIndexOf('/')) : ''))
     const edits = plan.edits.map((edit: any) => {
       const path = String(edit?.path ?? '').trim()
-      if (!allowed.has(path)) throw new Error(`O modelo tentou alterar um caminho não autorizado: ${path}`)
-      return { path, kind: 'update' as const, content: String(edit?.content ?? ''), expectedSha: allowed.get(path) }
+      const kind = edit?.kind === 'create' ? 'create' as const : 'update' as const
+      if (allowed.has(path) && kind === 'update') return { path, kind, content: String(edit?.content ?? ''), expectedSha: allowed.get(path) }
+      const parent = path.includes('/') ? path.slice(0,path.lastIndexOf('/')) : ''
+      if (kind === 'create' && !existingPaths.has(path) && allowedDirectories.has(parent) && !path.startsWith('.github/workflows/')) return { path, kind, content: String(edit?.content ?? '') }
+      throw new Error(`O modelo tentou alterar um caminho não autorizado: ${path}`)
     })
 
     if (!apply) return NextResponse.json({ mode: 'code', applied: false, repository, branch, summary: String(plan.summary ?? ''), commitMessage: String(plan.commitMessage ?? 'Open Claude Code changes'), edits, model: response.model, provider: response.provider, agents: profileOutputs.map((x:any)=>({name:x.name,model:x.model,provider:x.provider})) }, { headers: { 'Cache-Control': 'no-store' } })
@@ -121,7 +142,7 @@ export async function POST(request: Request) {
           signal:request.signal,
           maxTokens:24000,
           messages:[
-            {role:'system',content:'You are Open Claude Code. Return ONLY valid JSON: {"edits":[{"path":string,"content":string}]}. Fix the failing sandbox tests. Only edit files originally supplied.'},
+            {role:'system',content:'You are Open Claude Code. Return ONLY valid JSON: {"edits":[{"path":string,"content":string}]}. Fix the failing sandbox tests. Edit only the originally supplied files. Do not create or modify any additional path.'},
             {role:'user',content:`GOAL:\n${goal}\n\nITERATION: ${ctx.iteration}\n\nFAILURES:\n${ctx.tests.filter(t=>!t.success).map(t=>t.command.join(' ')+'\\nSTDOUT:\n'+t.stdout+'\\nSTDERR:\n'+t.stderr).join('\\n\\n')}\n\nCURRENT FILES:\n${ctx.edits.map(x=>'FILE: '+x.path+'\\n'+x.content).join('\\n\\n')}`}
           ],
           metadata:{mode:'code-revision',userId:user.id,repository,branch,strategy}

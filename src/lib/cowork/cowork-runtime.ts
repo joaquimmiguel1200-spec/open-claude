@@ -13,7 +13,7 @@ export function createCoworkRuntime(deps: { taskRunner: CoworkTaskRunner; maxCon
 
   const run = async (input: CoworkRunInput, onEvent?: (event: CoworkEvent) => void): Promise<CoworkRunResult> => {
     const runId = randomUUID()
-    const plan = input.plan ?? createCoworkPlan(input.goal, input.maxTasks ?? 5)
+    const plan = createCoworkPlan(input.goal, input.maxTasks ?? 5)
     const result: CoworkRunResult = { runId, status: 'planning', plan, events: [] }
     const control = { paused: false, cancelled: false }
     runs.set(runId, result); controls.set(runId, control)

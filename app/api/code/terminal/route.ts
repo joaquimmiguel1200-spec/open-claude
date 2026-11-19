@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       const github = await createGitHubClientForUser(supabase, user.id)
       let totalBytes = 0
       const tree = await github.listFiles(owner, repoName, branch, request.signal)
-      const paths = requestedPaths.length ? requestedPaths : tree.filter(file => /\\.(tsx?|jsx?|mjs|cjs|json|css|scss|html|md|mdx|py|sql|ya?ml|toml|sh|go|rs|java|kt|swift|php|rb|vue|svelte|astro)$/i.test(file.path) && !/(^|\\/)(node_modules|\\.git|\\.next|dist|build|coverage|vendor)(\\/|$)/i.test(file.path)).slice(0, 50).map(file => file.path)
+      const paths = requestedPaths.length ? requestedPaths : tree.filter(file => /\.(tsx?|jsx?|mjs|cjs|json|css|scss|html|md|mdx|py|sql|ya?ml|toml|sh|go|rs|java|kt|swift|php|rb|vue|svelte|astro)$/i.test(file.path) && !/(^|\/)(node_modules|\.git|\.next|dist|build|coverage|vendor)(\/|$)/i.test(file.path)).slice(0, 50).map(file => file.path)
       for (const path of paths) {
         const treeFile = tree.find(file => file.path === path)
         if (!treeFile) return NextResponse.json({ error: 'Caminho não encontrado no repositório: ' + path }, { status: 400 })
